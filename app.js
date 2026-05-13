@@ -39,7 +39,7 @@ state.streamers = state.streamers.map((streamer) => ({
 
 
 const theme = {
-  get() { return storage.get("streamstock_theme", "light"); },
+  get() { return storage.get("streamstock_theme", "dark"); },
   set(value) { storage.set("streamstock_theme", value); document.documentElement.setAttribute("data-theme", value); const btn = document.getElementById("themeToggleBtn"); if (btn) btn.textContent = value === "dark" ? "Light mode" : "Dark mode"; }
 };
 theme.set(theme.get());

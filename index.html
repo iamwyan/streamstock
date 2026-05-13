@@ -13,18 +13,28 @@
 <body>
   <div class="bg-grid"></div>
   <header class="site-header">
-    <a class="brand" href="index.html"><span class="brand-mark">S</span><span>StreamStock</span></a>
-    <nav class="desktop-nav">
-      <a href="index.html">Market</a>
-      <a href="portfolio.html">Portfolio</a>
-      <a href="leaderboard.html">Leaderboard</a>
-      <a href="profile.html">Profile</a>
-      
-    </nav>
-    <button class="ghost-btn" id="themeToggleBtn" type="button" aria-label="Toggle theme">Dark mode</button>
-    <button class="ghost-btn" id="resetDemoBtn" type="button">Reset demo</button>
+    <a class="brand" href="index.html"><span class="brand-mark">S</span><span>Stream<span style="color:var(--accent)">Stock</span></span></a>
+    <div class="header-search"><input type="search" placeholder="Search streamers or tickers..." /></div>
+    <nav class="desktop-nav"><a href="index.html">Markets</a><a href="portfolio.html">Portfolio</a><a href="leaderboard.html">Leaderboard</a><a href="profile.html">Profile</a></nav>
+    <div class="header-actions">
+      <button class="ghost-btn" id="themeToggleBtn" type="button" aria-label="Toggle theme">Dark mode</button>
+      <button class="ghost-btn" id="resetDemoBtn" type="button">Reset</button>
+    </div>
   </header>
 
+  <div class="app-shell">
+  <aside class="side-rail">
+    <div class="side-links">
+      <a class="side-link active" href="index.html">⌂ Markets</a>
+      <a class="side-link" href="portfolio.html">▧ Portfolio</a>
+      <a class="side-link" href="leaderboard.html">♕ Leaderboard</a>
+      <a class="side-link" href="profile.html">◎ Profile</a>
+    </div>
+    <div>
+      <div class="side-promo"><strong>Top Trader</strong><span>Climb the leaderboard with fake cash, real ego.</span><a class="primary-btn" href="leaderboard.html">View Board</a></div>
+      <div class="side-foot">© 2026 StreamStock<br>Fantasy investing only.</div>
+    </div>
+  </aside>
   <main>
     <section class="hero compact-hero">
       <div class="hero-copy">
@@ -75,6 +85,7 @@
       </div>
     </section>
   </main>
+</div>
 
   <footer><strong>StreamStock</strong><span>Fantasy investing only. Not affiliated with Twitch. No real securities, brokerages, or payouts.</span></footer>
   <script src="app.js"></script>

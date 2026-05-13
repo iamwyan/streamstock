@@ -41,3 +41,12 @@ Upload these files to GitHub, then import the repo into Vercel. No build command
 - Added a persistent light/dark mode toggle in the top header.
 - Kept all existing features: market overview, separate profile, portfolio, leaderboard, streamer pages, candlestick chart, timeframe controls, market orders, and limit orders.
 - Improved spacing, table readability, dropdown contrast, cards, trading layout, and mobile behavior.
+
+
+## v9 UI cleanup
+- Twitch + Fidelity inspired dashboard layout.
+- Left rail navigation on desktop.
+- Cleaner order ticket layout with no overflowing dropdowns/buttons.
+- Top gainers/losers now display as balanced side-by-side panels.
+- Dark mode defaults on first load; toggle still saves user preference.
+- Current functionality retained: market, streamer detail pages, candlestick chart, buy/sell, portfolio, profile, leaderboard, local demo storage.
