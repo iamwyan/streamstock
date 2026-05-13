@@ -382,6 +382,68 @@ function drawCandleChart(streamer) {
   setText('chartRangeLabel', config.label);
 }
 
+const leaderboardNames = [
+  "ClipLord", "SubWhale", "EmoteFund", "ChatDividend", "LurkerCapital", "DiamondMod", "PrimePumper", "CandleGoblin", "HypeTrainCEO", "RaidRisk",
+  "GreenCandleGary", "PortfolioPog", "MarketMage", "DegenDesk", "TickerWizard", "AlphaAndy", "MoonMarauder", "FomoFrog", "VolumeViking", "WKeyInvestor",
+  "BidAskBandit", "TrendGoblin", "SubathonShark", "OptionlessOwen", "MintyMargin", "BuyWallBilly", "SellWallSally", "ChartChimp", "WhaleWatcher", "PumpProfessor",
+  "RugProofRon", "BetaBeater", "YieldYapper", "DividendDude", "OrderBookOgre", "LimitLarry", "MarketMolly", "CaffeineCapital", "SideQuestSoros", "PixelProfit",
+  "StreamerStonks", "KappaKing", "PogQueen", "ModMailMax", "ChannelPointChad", "VODVulture", "RaidBossRich", "SubCountSam", "ClutchCandles", "BagHolderBen",
+  "RiskyRiley", "ProfitPanda", "TurboTrader", "SilentStacker", "DeepValueDan", "HODLHarper", "GigaGreen", "RedDayRay", "TapeReaderTess", "LiquidityLiam",
+  "WhisperWhale", "TrendTara", "ApeAccountant", "FidelityFaker", "PortfolioPete", "MemeMarketMia", "GammaGabe", "DeltaDylan", "ThetaTheo", "VegaVera",
+  "FloatFinder", "SubSpikeSyd", "MomentumMason", "CandlestickCal", "OrderFlowOli", "AskSlapper", "BidBuilder", "MintCondition", "PaperBillionaire", "TerminalTom",
+  "HeatMapHaley", "GreenScreenGene", "StreamSniper", "MoneyMouse", "LedgerLuca", "TwitchTickerTia", "NetWorthNate", "BullishBri", "BearishBlake", "RocketRonnie",
+  "FakeCoinFinn", "PortfolioPrincess", "ScreenerScout", "TrailingStopTroy", "ChartDoctor", "TradeTicketTim", "PriceActionPax", "BenchmarkedBea", "MarketMando", "SubPrime"
+];
+
+function buildLeaderboard() {
+  const rand = seededRandom("streamstock-leaderboard-v1");
+  const users = leaderboardNames.map((name, index) => {
+    const base = 18000 + Math.pow(100 - index, 1.72) * 420 + rand() * 18000;
+    const portfolioWeight = 0.25 + rand() * 0.62;
+    const portfolio = base * portfolioWeight;
+    const cash = base - portfolio;
+    const change = (rand() * 18 - 5.5);
+    return { name, cash, portfolio, netWorth: cash + portfolio, change };
+  });
+  users.push({
+    name: "You",
+    cash: state.cash,
+    portfolio: portfolioMarketValue(),
+    netWorth: accountValue(),
+    change: state.history.length > 1 ? ((accountValue() / state.history[0].value) - 1) * 100 : 0,
+    isYou: true
+  });
+  return users.sort((a, b) => b.netWorth - a.netWorth).slice(0, 100).map((user, i) => ({ ...user, rank: i + 1 }));
+}
+
+function renderLeaderboard() {
+  if (!$('leaderboardTable')) return;
+  const board = buildLeaderboard();
+  const q = $('leaderboardSearch') ? $('leaderboardSearch').value.trim().toLowerCase() : '';
+  const visible = q ? board.filter((u) => u.name.toLowerCase().includes(q)) : board;
+  const you = board.find((u) => u.isYou);
+  const top = board[0];
+  const average = board.reduce((sum, u) => sum + u.netWorth, 0) / Math.max(1, board.length);
+
+  setText('leaderTopUser', top ? `#1 ${top.name}` : 'No users');
+  setText('leaderTopValue', top ? `${money(top.netWorth)} net worth` : 'No leaderboard data');
+  setText('myRank', you ? `#${you.rank}` : 'Not top 100');
+  setText('myNetWorth', money(accountValue()));
+  setText('leaderAverage', money(average));
+  setText('leaderCount', `${board.length}`);
+
+  $('leaderboardTable').innerHTML = visible.map((u) => `
+    <tr class="${u.isYou ? 'you-row' : ''}">
+      <td><span class="rank-badge ${u.rank <= 3 ? 'podium' : ''}">#${u.rank}</span></td>
+      <td><strong>${u.name}</strong>${u.isYou ? '<span class="you-chip">You</span>' : ''}</td>
+      <td>${money(u.cash)}</td>
+      <td>${money(u.portfolio)}</td>
+      <td><strong>${money(u.netWorth)}</strong></td>
+      <td class="${u.change >= 0 ? 'gain' : 'loss'}">${u.change >= 0 ? '+' : ''}${u.change.toFixed(2)}%</td>
+    </tr>
+  `).join('');
+}
+
 function renderAll() {
   renderTickerTape();
   renderMarketLists();
@@ -391,6 +453,7 @@ function renderAll() {
   renderPositions();
   renderOrders();
   renderStreamerPage();
+  renderLeaderboard();
   drawValueChart();
   saveState();
 }
@@ -564,6 +627,7 @@ if ($("orderType")) $("orderType").addEventListener("change", () => {
 });
 ["shareAmount", "limitPrice"].forEach((id) => { if ($(id)) $(id).addEventListener("input", updateEstimatedTotal); });
 if ($("searchInput")) $("searchInput").addEventListener("input", renderTable);
+if ($("leaderboardSearch")) $("leaderboardSearch").addEventListener("input", renderLeaderboard);
 if ($("checkOrdersBtn")) $("checkOrdersBtn").addEventListener("click", checkLimitOrders);
 if ($("resetDemoBtn")) $("resetDemoBtn").addEventListener("click", () => {
   localStorage.removeItem("streamstock_streamers");

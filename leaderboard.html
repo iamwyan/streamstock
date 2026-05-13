@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leaderboard | StreamStock</title>
+  <meta name="description" content="See the top 100 richest StreamStock users by total fake net worth." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark">S</span><span>StreamStock</span></a>
+    <nav class="desktop-nav"><a href="index.html">Market</a><a href="portfolio.html">Portfolio</a><a href="leaderboard.html">Leaderboard</a><a href="profile.html">Profile</a></nav>
+    <button class="ghost-btn" id="resetDemoBtn" type="button">Reset demo</button>
+  </header>
+
+  <main>
+    <section class="page-hero leaderboard-hero">
+      <div>
+        <a class="back-link" href="index.html">← Back to market</a>
+        <p class="eyebrow">Top traders</p>
+        <h1>Richest users.</h1>
+        <p class="big-muted muted">The top 100 StreamStock accounts ranked by fake net worth. Your local demo account is included in the board, so yes, you can absolutely climb this thing like a gremlin hedge fund.</p>
+      </div>
+      <article class="panel leaderboard-summary">
+        <span>Current #1</span>
+        <strong id="leaderTopUser">Loading...</strong>
+        <p class="muted" id="leaderTopValue">Calculating leaderboard...</p>
+      </article>
+    </section>
+
+    <section class="stats-row compact-stats">
+      <article class="stat-card"><span>Your Rank</span><strong id="myRank">--</strong></article>
+      <article class="stat-card"><span>Your Net Worth</span><strong id="myNetWorth">$0.00</strong></article>
+      <article class="stat-card"><span>Top 100 Average</span><strong id="leaderAverage">$0.00</strong></article>
+      <article class="stat-card"><span>Users Ranked</span><strong id="leaderCount">100</strong></article>
+    </section>
+
+    <section class="panel full leaderboard-panel">
+      <div class="panel-head wrap">
+        <div>
+          <h3>Top 100 leaderboard</h3>
+          <p class="muted">Ranked by cash + current portfolio value.</p>
+        </div>
+        <input class="search" id="leaderboardSearch" type="search" placeholder="Search username..." />
+      </div>
+      <div class="table-wrap">
+        <table class="leaderboard-table">
+          <thead>
+            <tr><th>Rank</th><th>User</th><th>Cash</th><th>Portfolio</th><th>Net Worth</th><th>24h</th></tr>
+          </thead>
+          <tbody id="leaderboardTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer><strong>StreamStock</strong><span>Fantasy investing only. Leaderboard data is demo/seeding until a real backend is connected.</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>
