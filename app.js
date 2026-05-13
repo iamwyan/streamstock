@@ -25,10 +25,12 @@ let state = {
   cash: storage.get("streamstock_cash", STARTING_CASH),
   positions: storage.get("streamstock_positions", {}),
   orders: storage.get("streamstock_orders", []),
+  history: storage.get("streamstock_history", []),
   selectedTicker: storage.get("streamstock_selected", defaultStreamers[0].ticker)
 };
 
 const $ = (id) => document.getElementById(id);
+const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
 const money = (num) => `$${Number(num || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
 const shares = (num) => Number(num || 0).toLocaleString();
 const priceFor = (streamer) => streamer.subscribers * SUBSCRIBER_TO_PRICE;
@@ -39,7 +41,30 @@ function saveState() {
   storage.set("streamstock_cash", state.cash);
   storage.set("streamstock_positions", state.positions);
   storage.set("streamstock_orders", state.orders);
+  storage.set("streamstock_history", state.history);
   storage.set("streamstock_selected", state.selectedTicker);
+}
+
+function accountValue() {
+  return state.cash + portfolioMarketValue();
+}
+
+function seedHistoryIfNeeded() {
+  if (state.history && state.history.length) return;
+  const base = accountValue();
+  state.history = [
+    { label: "Start", value: base * 0.985 },
+    { label: "Day 2", value: base * 1.01 },
+    { label: "Day 3", value: base * 0.997 },
+    { label: "Day 4", value: base * 1.018 },
+    { label: "Now", value: base }
+  ];
+}
+
+function recordHistoryPoint() {
+  seedHistoryIfNeeded();
+  state.history.push({ label: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), value: accountValue() });
+  state.history = state.history.slice(-14);
 }
 
 function portfolioMarketValue() {
@@ -55,6 +80,7 @@ function totalCostBasis() {
 
 function renderTickerTape() {
   const top = [...state.streamers].sort((a, b) => b.dayChange - a.dayChange).slice(0, 4);
+  if (!$("tickerTape")) return;
   $("tickerTape").innerHTML = top.map((s) => `
     <div class="tape-item">
       <strong>${s.ticker}</strong>
@@ -71,12 +97,14 @@ function renderMarketLists() {
       <div style="text-align:right"><strong>${money(priceFor(s))}</strong><p class="${s.dayChange >= 0 ? "gain" : "loss"}">${s.dayChange >= 0 ? "+" : ""}${s.dayChange}%</p></div>
     </div>
   `;
+  if (!$("gainersList") || !$("losersList")) return;
   $("gainersList").innerHTML = [...state.streamers].sort((a, b) => b.dayChange - a.dayChange).slice(0, 5).map(row).join("");
   $("losersList").innerHTML = [...state.streamers].sort((a, b) => a.dayChange - b.dayChange).slice(0, 5).map(row).join("");
 }
 
 function renderTable() {
-  const q = $("searchInput").value.trim().toLowerCase();
+  if (!$("tickerTable")) return;
+  const q = $("searchInput") ? $("searchInput").value.trim().toLowerCase() : "";
   const filtered = state.streamers.filter((s) => `${s.name} ${s.ticker}`.toLowerCase().includes(q));
   $("tickerTable").innerHTML = filtered.map((s) => `
     <tr>
@@ -93,15 +121,16 @@ function renderTable() {
 function renderAccount() {
   const marketValue = portfolioMarketValue();
   const totalReturn = marketValue - totalCostBasis();
-  $("portfolioValue").textContent = money(marketValue + state.cash);
-  $("cashBalance").textContent = money(state.cash);
-  $("cashBalanceHero").textContent = money(state.cash);
-  $("totalReturn").textContent = `${totalReturn >= 0 ? "+" : ""}${money(totalReturn)}`;
-  $("totalReturn").className = totalReturn >= 0 ? "gain" : "loss";
-  $("openOrderCount").textContent = state.orders.length;
+  setText("portfolioValue", money(marketValue + state.cash));
+  setText("cashBalance", money(state.cash));
+  setText("cashBalanceHero", money(state.cash));
+  setText("totalReturn", `${totalReturn >= 0 ? "+" : ""}${money(totalReturn)}`);
+  if ($("totalReturn")) $("totalReturn").className = totalReturn >= 0 ? "gain" : "loss";
+  setText("openOrderCount", state.orders.length);
 }
 
 function renderSelected() {
+  if (!$("selectedName")) return;
   const selected = findStreamer(state.selectedTicker) || state.streamers[0];
   if (!selected) return;
   state.selectedTicker = selected.ticker;
@@ -114,10 +143,12 @@ function renderSelected() {
 function renderPositions() {
   const entries = Object.entries(state.positions).filter(([, p]) => p.shares > 0);
   if (!entries.length) {
+    if (!$("positionsList")) return;
     $("positionsList").innerHTML = `<div class="empty-state">No positions yet. Go buy something before chat pumps it.</div>`;
     return;
   }
 
+  if (!$("positionsList")) return;
   $("positionsList").innerHTML = entries.map(([ticker, position]) => {
     const streamer = findStreamer(ticker);
     if (!streamer) return "";
@@ -134,6 +165,7 @@ function renderPositions() {
 }
 
 function renderOrders() {
+  if (!$("ordersList")) return;
   if (!state.orders.length) {
     $("ordersList").innerHTML = `<div class="empty-state">No open limit orders.</div>`;
     return;
@@ -147,12 +179,13 @@ function renderOrders() {
 }
 
 function updateEstimatedTotal() {
+  if (!$("estimatedTotal")) return;
   const selected = findStreamer(state.selectedTicker);
-  const amount = Math.max(0, Number($("shareAmount").value || 0));
-  const type = $("orderType").value;
-  const limit = Number($("limitPrice").value || 0);
+  const amount = Math.max(0, Number($("shareAmount")?.value || 0));
+  const type = $("orderType")?.value || "market";
+  const limit = Number($("limitPrice")?.value || 0);
   const activePrice = type === "limit" && limit > 0 ? limit : selected ? priceFor(selected) : 0;
-  $("estimatedTotal").textContent = money(amount * activePrice);
+  setText("estimatedTotal", money(amount * activePrice));
 }
 
 function renderAll() {
@@ -163,6 +196,7 @@ function renderAll() {
   renderAccount();
   renderPositions();
   renderOrders();
+  drawValueChart();
   saveState();
 }
 
@@ -179,6 +213,7 @@ function placeMarketOrder(side, ticker, amount) {
     const newAverage = ((existing.shares * existing.averageCost) + total) / newShares;
     state.positions[ticker] = { shares: newShares, averageCost: newAverage };
     state.cash -= total;
+    recordHistoryPoint();
     return `Bought ${shares(amount)} ${ticker} at ${money(price)}.`;
   }
 
@@ -187,6 +222,7 @@ function placeMarketOrder(side, ticker, amount) {
   existing.shares -= amount;
   state.cash += total;
   if (existing.shares <= 0) delete state.positions[ticker];
+  recordHistoryPoint();
   return `Sold ${shares(amount)} ${ticker} at ${money(price)}.`;
 }
 
@@ -208,27 +244,91 @@ function checkLimitOrders() {
     else remaining.push(order);
   });
   state.orders = remaining;
-  $("tradeMessage").textContent = fills.length ? fills.join(" ") : "No limit orders filled yet.";
+  setText("tradeMessage", fills.length ? fills.join(" ") : "No limit orders filled yet.");
   renderAll();
 }
 
-$("tradeForm").addEventListener("submit", (event) => {
+
+function drawValueChart() {
+  const canvas = $("valueChart");
+  if (!canvas) return;
+  seedHistoryIfNeeded();
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 260 * dpr;
+  ctx.scale(dpr, dpr);
+  const width = rect.width;
+  const height = 260;
+  ctx.clearRect(0, 0, width, height);
+
+  const pad = 28;
+  const values = state.history.map((p) => p.value);
+  const min = Math.min(...values) * 0.995;
+  const max = Math.max(...values) * 1.005;
+  const range = Math.max(1, max - min);
+  const points = state.history.map((p, i) => ({
+    x: pad + (i / Math.max(1, state.history.length - 1)) * (width - pad * 2),
+    y: height - pad - ((p.value - min) / range) * (height - pad * 2),
+    ...p
+  }));
+
+  ctx.strokeStyle = "rgba(255,255,255,0.1)";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) {
+    const y = pad + i * ((height - pad * 2) / 3);
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(width - pad, y); ctx.stroke();
+  }
+
+  const gradient = ctx.createLinearGradient(0, pad, 0, height - pad);
+  gradient.addColorStop(0, "rgba(33, 230, 193, 0.32)");
+  gradient.addColorStop(1, "rgba(124, 92, 255, 0.02)");
+  ctx.beginPath();
+  points.forEach((pt, i) => i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y));
+  ctx.lineTo(points[points.length - 1].x, height - pad);
+  ctx.lineTo(points[0].x, height - pad);
+  ctx.closePath();
+  ctx.fillStyle = gradient;
+  ctx.fill();
+
+  ctx.beginPath();
+  points.forEach((pt, i) => i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y));
+  ctx.strokeStyle = "#21e6c1";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  points.forEach((pt) => {
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = "#f7fbff";
+    ctx.fill();
+  });
+
+  ctx.fillStyle = "rgba(247,251,255,0.78)";
+  ctx.font = "700 12px Inter, system-ui";
+  ctx.fillText(money(values[values.length - 1]), pad, 18);
+  ctx.fillStyle = "rgba(154,167,187,0.9)";
+  ctx.fillText("latest", pad + 112, 18);
+}
+
+if ($("tradeForm")) $("tradeForm").addEventListener("submit", (event) => {
   event.preventDefault();
   const side = $("orderSide").value;
   const type = $("orderType").value;
   const amount = Math.floor(Number($("shareAmount").value || 0));
   if (amount <= 0) {
-    $("tradeMessage").textContent = "Enter at least 1 share.";
+    setText("tradeMessage", "Enter at least 1 share.");
     return;
   }
   const msg = type === "market"
     ? placeMarketOrder(side, state.selectedTicker, amount)
     : placeLimitOrder(side, state.selectedTicker, amount, Number($("limitPrice").value || 0));
-  $("tradeMessage").textContent = msg;
+  setText("tradeMessage", msg);
   renderAll();
 });
 
-$("tickerForm").addEventListener("submit", (event) => {
+if ($("tickerForm")) $("tickerForm").addEventListener("submit", (event) => {
   event.preventDefault();
   const ticker = $("newTicker").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (state.streamers.some((s) => s.ticker === ticker)) {
@@ -247,20 +347,21 @@ $("tickerForm").addEventListener("submit", (event) => {
   location.hash = "trade";
 });
 
-$("orderType").addEventListener("change", () => {
+if ($("orderType")) $("orderType").addEventListener("change", () => {
   $("limitPriceWrap").classList.toggle("hidden", $("orderType").value !== "limit");
   updateEstimatedTotal();
 });
-["shareAmount", "limitPrice"].forEach((id) => $(id).addEventListener("input", updateEstimatedTotal));
-$("searchInput").addEventListener("input", renderTable);
-$("checkOrdersBtn").addEventListener("click", checkLimitOrders);
-$("resetDemoBtn").addEventListener("click", () => {
+["shareAmount", "limitPrice"].forEach((id) => { if ($(id)) $(id).addEventListener("input", updateEstimatedTotal); });
+if ($("searchInput")) $("searchInput").addEventListener("input", renderTable);
+if ($("checkOrdersBtn")) $("checkOrdersBtn").addEventListener("click", checkLimitOrders);
+if ($("resetDemoBtn")) $("resetDemoBtn").addEventListener("click", () => {
   localStorage.removeItem("streamstock_streamers");
   localStorage.removeItem("streamstock_cash");
   localStorage.removeItem("streamstock_positions");
   localStorage.removeItem("streamstock_orders");
+  localStorage.removeItem("streamstock_history");
   localStorage.removeItem("streamstock_selected");
-  state = { streamers: defaultStreamers, cash: STARTING_CASH, positions: {}, orders: [], selectedTicker: defaultStreamers[0].ticker };
+  state = { streamers: defaultStreamers, cash: STARTING_CASH, positions: {}, orders: [], history: [], selectedTicker: defaultStreamers[0].ticker };
   renderAll();
 });
 
@@ -269,9 +370,9 @@ document.addEventListener("click", (event) => {
   const cancel = event.target.closest("[data-cancel]");
   if (select) {
     state.selectedTicker = select.dataset.select;
-    $("tradeMessage").textContent = "";
+    setText("tradeMessage", "");
     renderAll();
-    location.hash = "trade";
+    location.href = "index.html#trade";
   }
   if (cancel) {
     state.orders.splice(Number(cancel.dataset.cancel), 1);
@@ -279,4 +380,6 @@ document.addEventListener("click", (event) => {
   }
 });
 
+window.addEventListener("resize", drawValueChart);
+seedHistoryIfNeeded();
 renderAll();

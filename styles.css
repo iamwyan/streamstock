@@ -290,3 +290,83 @@ code { color: var(--accent-2); background: rgba(33, 230, 193, 0.08); padding: 0.
   .hero-card-top, .panel-head, .market-row, .position-row, .order-row, footer { align-items: flex-start; flex-direction: column; }
   h1 { font-size: clamp(3rem, 17vw, 4.4rem); }
 }
+
+/* Page split + readability fixes */
+.desktop-nav a[href="portfolio.html"] {
+  color: var(--accent-2);
+}
+.trade-layout.single {
+  grid-template-columns: 1fr 1fr;
+}
+.orders-panel {
+  min-height: 100%;
+}
+select {
+  color: #f7fbff;
+  background-color: #101827;
+  appearance: auto;
+}
+select option {
+  color: #101827;
+  background: #ffffff;
+}
+input::placeholder {
+  color: rgba(154, 167, 187, 0.82);
+}
+.page-hero {
+  min-height: 270px;
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 4rem 0 1.5rem;
+}
+.page-hero h1 {
+  margin: 0.2rem 0 0.7rem;
+}
+.big-muted {
+  max-width: 700px;
+  font-size: 1.05rem;
+}
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-self: end;
+  min-width: min(100%, 360px);
+}
+.profile-ring.large {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 1.4rem;
+  font-size: 1.35rem;
+}
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 1rem;
+  align-items: start;
+  margin: 1rem 0;
+}
+.chart-panel canvas {
+  width: 100%;
+  display: block;
+  margin-top: 1rem;
+  border-radius: 1rem;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.075);
+}
+.compact-stats {
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 900px) {
+  .trade-layout.single,
+  .page-hero,
+  .portfolio-grid {
+    grid-template-columns: 1fr;
+  }
+  .profile-card {
+    justify-self: stretch;
+  }
+}

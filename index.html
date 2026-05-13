@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StreamStock | Fantasy streamer investing</title>
-  <meta name="description" content="Invest fake currency into Twitch streamers. Track streamer tickers, portfolios, gainers, losers, and orders." />
+  <meta name="description" content="Invest fake currency into Twitch streamers. Track streamer tickers, top gainers, top losers, and trade fake shares." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -13,15 +13,15 @@
 <body>
   <div class="bg-grid"></div>
   <header class="site-header">
-    <a class="brand" href="#home" aria-label="StreamStock home">
+    <a class="brand" href="index.html" aria-label="StreamStock home">
       <span class="brand-mark">S</span>
       <span>StreamStock</span>
     </a>
     <nav class="desktop-nav">
-      <a href="#market">Market</a>
-      <a href="#trade">Trade</a>
-      <a href="#portfolio">Portfolio</a>
-      <a href="#admin">Add Ticker</a>
+      <a href="index.html#market">Market</a>
+      <a href="index.html#trade">Trade</a>
+      <a href="portfolio.html">Profile & Portfolio</a>
+      <a href="index.html#admin">Add Ticker</a>
     </nav>
     <button class="ghost-btn" id="resetDemoBtn" type="button">Reset demo</button>
   </header>
@@ -30,38 +30,38 @@
     <section class="hero" id="home">
       <div class="hero-copy">
         <div class="pill">Fantasy markets for Twitch culture</div>
-        <h1>Buy the hype before chat does.</h1>
+        <h1>Trade streamer momentum.</h1>
         <p>
           StreamStock lets users invest fake currency into streamer tickers. Prices are driven by subscriber count,
           with the base formula starting at <strong>1 subscriber = $0.0005</strong> in fake stock value.
         </p>
         <div class="hero-actions">
           <a class="primary-btn" href="#trade">Start trading</a>
-          <a class="secondary-btn" href="#market">View market</a>
+          <a class="secondary-btn" href="portfolio.html">View portfolio</a>
         </div>
       </div>
 
       <div class="hero-card glass-card">
         <div class="hero-card-top">
-          <span>Live demo balance</span>
+          <span>Demo buying power</span>
           <strong id="cashBalanceHero">$0.00</strong>
         </div>
         <div class="ticker-tape" id="tickerTape"></div>
         <div class="mini-chart" aria-hidden="true">
           <span></span><span></span><span></span><span></span><span></span><span></span>
         </div>
-        <p class="muted">No real money. No actual securities. Just fake coins and streamer chaos. Very Wall Street, but with emotes.</p>
+        <p class="muted">No real money. No actual securities. Just fake coins and streamer chaos. Wall Street with emotes.</p>
       </div>
     </section>
 
-    <section class="stats-row" aria-label="Account stats">
-      <article class="stat-card">
-        <span>Portfolio Value</span>
-        <strong id="portfolioValue">$0.00</strong>
-      </article>
+    <section class="stats-row compact-stats" aria-label="Market stats">
       <article class="stat-card">
         <span>Buying Power</span>
         <strong id="cashBalance">$0.00</strong>
+      </article>
+      <article class="stat-card">
+        <span>Portfolio Value</span>
+        <strong id="portfolioValue">$0.00</strong>
       </article>
       <article class="stat-card">
         <span>Total Return</span>
@@ -122,7 +122,7 @@
       </div>
     </section>
 
-    <section class="trade-layout" id="trade">
+    <section class="trade-layout single" id="trade">
       <article class="panel trade-ticket">
         <div class="panel-head">
           <div>
@@ -168,28 +168,16 @@
         </form>
       </article>
 
-      <article class="panel" id="portfolio">
+      <article class="panel orders-panel">
         <div class="panel-head wrap">
           <div>
-            <p class="eyebrow">User profile</p>
-            <h2>@demo_trader</h2>
-            <p class="muted">Your positions, cost basis, and unrealized P/L.</p>
+            <h3>Open Limit Orders</h3>
+            <p class="muted">Limit orders execute when the current price crosses your target.</p>
           </div>
-          <span class="profile-ring">DT</span>
+          <button class="secondary-btn small" id="checkOrdersBtn" type="button">Check orders</button>
         </div>
-        <div id="positionsList" class="list-stack empty-safe"></div>
+        <div id="ordersList" class="list-stack empty-safe"></div>
       </article>
-    </section>
-
-    <section class="panel full">
-      <div class="panel-head wrap">
-        <div>
-          <h3>Open Limit Orders</h3>
-          <p class="muted">Limit orders execute when the current price crosses your target.</p>
-        </div>
-        <button class="secondary-btn small" id="checkOrdersBtn" type="button">Check orders</button>
-      </div>
-      <div id="ordersList" class="list-stack empty-safe"></div>
     </section>
 
     <section class="panel full admin-panel" id="admin">
