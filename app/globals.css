@@ -227,3 +227,64 @@ button, input, select { font: inherit; max-width: 100%; }
 .trade-ticket { display:grid; gap:12px; }
 .trade-ticket input, .trade-ticket select { width:100%; border:1px solid var(--border); border-radius:14px; padding:12px; background:var(--input-bg, #fff); color:var(--text); }
 @media (max-width: 900px) { .form-grid, .metric-grid { grid-template-columns:1fr; } .chart-host { min-height: 360px; } }
+
+/* v11 layout + contrast fixes */
+:root {
+  --border: var(--line);
+  --input-bg: #ffffff;
+  --input-text: #101828;
+}
+[data-theme="dark"] {
+  --border: rgba(255,255,255,.14);
+  --input-bg: #151927;
+  --input-text: #f5f7fb;
+}
+.streamer-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  gap: 18px;
+  align-items: start;
+  margin-top: 18px;
+}
+.trade-sidebar {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.chart-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+.chart-host {
+  min-height: clamp(480px, 58vh, 720px);
+  background: var(--card-2);
+  border: 1px solid var(--line);
+}
+.timeframe-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+input, select,
+.trade-ticket input, .trade-ticket select,
+.header-search input, .search {
+  background: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  border-color: var(--line) !important;
+}
+[data-theme="dark"] option {
+  background: #151927 !important;
+  color: #f5f7fb !important;
+}
+input::placeholder { color: var(--muted); }
+.trade-ticket label { color: var(--text); }
+.trade-ticket .panel-head { min-width: 0; }
+.trade-ticket .panel-head span { white-space: nowrap; color: var(--broker); font-weight: 900; }
+.market-info-panel .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.metric-tile { border-color: var(--line) !important; background: var(--bg-soft) !important; min-width: 0; }
+.metric-tile strong { word-break: break-word; }
+@media (max-width: 1100px) {
+  .streamer-layout { grid-template-columns: 1fr; }
+  .trade-sidebar { grid-template-columns: 1fr; }
+}
