@@ -35,3 +35,9 @@ Upload these files to GitHub, then import the repo into Vercel. No build command
 - Timeframe buttons: 1m, 5m, 10m, Day, 30 Day.
 - Chart supports mouse wheel zoom, drag scrolling, touch drag, and pinch zoom.
 - Current quote/fundamental/flow information sits next to the candlestick chart.
+
+## v8 updates
+- Redesigned the interface into a Twitch-meets-brokerage style: purple streaming energy with a cleaner Fidelity-like market structure.
+- Added a persistent light/dark mode toggle in the top header.
+- Kept all existing features: market overview, separate profile, portfolio, leaderboard, streamer pages, candlestick chart, timeframe controls, market orders, and limit orders.
+- Improved spacing, table readability, dropdown contrast, cards, trading layout, and mobile behavior.

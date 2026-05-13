@@ -37,6 +37,14 @@ state.streamers = state.streamers.map((streamer) => ({
   liquidity: Number(streamer.liquidity || DEFAULT_LIQUIDITY)
 }));
 
+
+const theme = {
+  get() { return storage.get("streamstock_theme", "light"); },
+  set(value) { storage.set("streamstock_theme", value); document.documentElement.setAttribute("data-theme", value); const btn = document.getElementById("themeToggleBtn"); if (btn) btn.textContent = value === "dark" ? "Light mode" : "Dark mode"; }
+};
+theme.set(theme.get());
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
 const $ = (id) => document.getElementById(id);
 const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
 const money = (num) => `$${Number(num || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
@@ -310,7 +318,7 @@ function fallbackCandleChart(container, candles) {
   const min = Math.min(...candles.map(c => c.low)) * 0.99;
   const y = val => height - pad - ((val - min) / Math.max(0.000001, max - min)) * (height - pad * 2);
   ctx.clearRect(0, 0, width, height);
-  ctx.strokeStyle = 'rgba(15, 23, 42, 0.12)';
+  ctx.strokeStyle = cssVar('--line-soft');
   for (let i = 0; i < 6; i++) {
     const gy = pad + i * ((height - pad * 2) / 5);
     ctx.beginPath(); ctx.moveTo(pad, gy); ctx.lineTo(width - pad, gy); ctx.stroke();
@@ -348,18 +356,18 @@ function drawCandleChart(streamer) {
   if (!candleChartApi) {
     candleChartApi = LightweightCharts.createChart(container, {
       width: Math.max(320, Math.floor(rect.width)),
-      height: 560,
+      height: window.innerWidth < 620 ? 420 : 560,
       layout: {
-        background: { type: 'solid', color: '#ffffff' },
-        textColor: '#334155',
+        background: { type: 'solid', color: cssVar('--card') },
+        textColor: cssVar('--muted'),
         fontFamily: 'Inter, system-ui, sans-serif'
       },
       grid: {
-        vertLines: { color: '#edf2f7' },
-        horzLines: { color: '#edf2f7' }
+        vertLines: { color: cssVar('--line-soft') },
+        horzLines: { color: cssVar('--line-soft') }
       },
-      rightPriceScale: { borderColor: '#d7dde7', scaleMargins: { top: 0.12, bottom: 0.12 } },
-      timeScale: { borderColor: '#d7dde7', timeVisible: true, secondsVisible: false, rightOffset: 8, barSpacing: 8 },
+      rightPriceScale: { borderColor: cssVar('--line'), scaleMargins: { top: 0.12, bottom: 0.12 } },
+      timeScale: { borderColor: cssVar('--line'), timeVisible: true, secondsVisible: false, rightOffset: 8, barSpacing: 8 },
       crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
       handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true }
@@ -374,7 +382,14 @@ function drawCandleChart(streamer) {
       priceFormat: { type: 'price', precision: 4, minMove: 0.0001 }
     });
   } else {
-    candleChartApi.applyOptions({ width: Math.max(320, Math.floor(rect.width)), height: 560 });
+    candleChartApi.applyOptions({
+      width: Math.max(320, Math.floor(rect.width)),
+      height: window.innerWidth < 620 ? 420 : 560,
+      layout: { background: { type: 'solid', color: cssVar('--card') }, textColor: cssVar('--muted') },
+      grid: { vertLines: { color: cssVar('--line-soft') }, horzLines: { color: cssVar('--line-soft') } },
+      rightPriceScale: { borderColor: cssVar('--line'), scaleMargins: { top: 0.12, bottom: 0.12 } },
+      timeScale: { borderColor: cssVar('--line'), timeVisible: true, secondsVisible: false, rightOffset: 8, barSpacing: 8 }
+    });
   }
 
   candleSeriesApi.setData(candles);
@@ -536,7 +551,7 @@ function drawValueChart() {
     ...p
   }));
 
-  ctx.strokeStyle = "rgba(255,255,255,0.1)";
+  ctx.strokeStyle = cssVar("--line-soft");
   ctx.lineWidth = 1;
   for (let i = 0; i < 4; i++) {
     const y = pad + i * ((height - pad * 2) / 3);
@@ -556,21 +571,21 @@ function drawValueChart() {
 
   ctx.beginPath();
   points.forEach((pt, i) => i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y));
-  ctx.strokeStyle = "#21e6c1";
+  ctx.strokeStyle = cssVar("--broker");
   ctx.lineWidth = 3;
   ctx.stroke();
 
   points.forEach((pt) => {
     ctx.beginPath();
     ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
-    ctx.fillStyle = "#f7fbff";
+    ctx.fillStyle = cssVar("--card");
     ctx.fill();
   });
 
-  ctx.fillStyle = "rgba(247,251,255,0.78)";
+  ctx.fillStyle = cssVar("--text");
   ctx.font = "700 12px Inter, system-ui";
   ctx.fillText(money(values[values.length - 1]), pad, 18);
-  ctx.fillStyle = "rgba(154,167,187,0.9)";
+  ctx.fillStyle = cssVar("--muted");
   ctx.fillText("latest", pad + 112, 18);
 }
 
@@ -629,6 +644,14 @@ if ($("orderType")) $("orderType").addEventListener("change", () => {
 if ($("searchInput")) $("searchInput").addEventListener("input", renderTable);
 if ($("leaderboardSearch")) $("leaderboardSearch").addEventListener("input", renderLeaderboard);
 if ($("checkOrdersBtn")) $("checkOrdersBtn").addEventListener("click", checkLimitOrders);
+
+if ($("themeToggleBtn")) $("themeToggleBtn").addEventListener("click", () => {
+  theme.set(theme.get() === "dark" ? "light" : "dark");
+  const streamer = findStreamer(state.selectedTicker);
+  drawValueChart();
+  if (streamer) drawCandleChart(streamer);
+});
+
 if ($("resetDemoBtn")) $("resetDemoBtn").addEventListener("click", () => {
   localStorage.removeItem("streamstock_streamers");
   localStorage.removeItem("streamstock_cash");
@@ -655,6 +678,6 @@ document.addEventListener("click", (event) => {
   }
 });
 
-window.addEventListener("resize", () => { drawValueChart(); if (candleChartApi && $("candleChart")) candleChartApi.applyOptions({ width: Math.max(320, Math.floor($("candleChart").getBoundingClientRect().width)), height: 560 }); const s = findStreamer(state.selectedTicker); if (s) drawCandleChart(s); });
+window.addEventListener("resize", () => { drawValueChart(); if (candleChartApi && $("candleChart")) candleChartApi.applyOptions({ width: Math.max(320, Math.floor($("candleChart").getBoundingClientRect().width)), height: window.innerWidth < 620 ? 420 : 560 }); const s = findStreamer(state.selectedTicker); if (s) drawCandleChart(s); });
 seedHistoryIfNeeded();
 renderAll();
