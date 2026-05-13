@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Profile & Portfolio | StreamStock</title>
-  <meta name="description" content="View your StreamStock profile, portfolio positions, orders, and account value over time." />
+  <title>Portfolio | StreamStock</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -13,95 +12,20 @@
 <body>
   <div class="bg-grid"></div>
   <header class="site-header">
-    <a class="brand" href="index.html" aria-label="StreamStock home">
-      <span class="brand-mark">S</span>
-      <span>StreamStock</span>
-    </a>
-    <nav class="desktop-nav">
-      <a href="index.html#market">Market</a>
-      <a href="index.html#trade">Trade</a>
-      <a href="portfolio.html">Profile & Portfolio</a>
-      <a href="index.html#admin">Add Ticker</a>
-    </nav>
+    <a class="brand" href="index.html"><span class="brand-mark">S</span><span>StreamStock</span></a>
+    <nav class="desktop-nav"><a href="index.html">Market</a><a href="portfolio.html">Portfolio</a><a href="profile.html">Profile</a><a href="admin.html">Add Ticker</a></nav>
     <button class="ghost-btn" id="resetDemoBtn" type="button">Reset demo</button>
   </header>
-
   <main>
-    <section class="page-hero">
-      <div>
-        <p class="eyebrow">User profile</p>
-        <h1>@demo_trader</h1>
-        <p class="muted big-muted">Track fake buying power, holdings, unrealized gains, and your StreamStock value over time.</p>
-      </div>
-      <div class="profile-card panel">
-        <span class="profile-ring large">DT</span>
-        <div>
-          <strong>Demo Trader</strong>
-          <p class="muted">Fantasy account · Browser saved</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="stats-row compact-stats" aria-label="Portfolio stats">
-      <article class="stat-card">
-        <span>Total Account Value</span>
-        <strong id="portfolioValue">$0.00</strong>
-      </article>
-      <article class="stat-card">
-        <span>Buying Power</span>
-        <strong id="cashBalance">$0.00</strong>
-      </article>
-      <article class="stat-card">
-        <span>Total Return</span>
-        <strong id="totalReturn">$0.00</strong>
-      </article>
-      <article class="stat-card">
-        <span>Open Orders</span>
-        <strong id="openOrderCount">0</strong>
-      </article>
-    </section>
-
+    <section class="page-hero skinny"><div><p class="eyebrow">Portfolio</p><h1>Your holdings</h1><p class="muted big-muted">Track positions, account value over time, and open limit orders.</p></div></section>
+    <section class="stats-row compact-stats"><article class="stat-card"><span>Total Account Value</span><strong id="portfolioValue">$0.00</strong></article><article class="stat-card"><span>Buying Power</span><strong id="cashBalance">$0.00</strong></article><article class="stat-card"><span>Total Return</span><strong id="totalReturn">$0.00</strong></article><article class="stat-card"><span>Open Orders</span><strong id="openOrderCount">0</strong></article></section>
     <section class="portfolio-grid">
-      <article class="panel chart-panel">
-        <div class="panel-head wrap">
-          <div>
-            <p class="eyebrow">Account chart</p>
-            <h2>StreamStock worth over time</h2>
-            <p class="muted">Demo history is saved after trades. New accounts show a starter trend so the graph isn’t a sad flat noodle.</p>
-          </div>
-        </div>
-        <canvas id="valueChart" height="260" aria-label="Portfolio worth over time chart"></canvas>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head wrap">
-          <div>
-            <p class="eyebrow">Holdings</p>
-            <h2>Current positions</h2>
-            <p class="muted">Shares, average cost, current value, and unrealized P/L.</p>
-          </div>
-        </div>
-        <div id="positionsList" class="list-stack empty-safe"></div>
-      </article>
+      <article class="panel chart-panel"><div class="panel-head wrap"><div><p class="eyebrow">Account chart</p><h2>StreamStock worth over time</h2><p class="muted">Updates after trades.</p></div></div><canvas id="valueChart" height="260"></canvas></article>
+      <article class="panel"><div class="panel-head wrap"><div><p class="eyebrow">Holdings</p><h2>Current positions</h2></div></div><div id="positionsList" class="list-stack"></div></article>
     </section>
-
-    <section class="panel full">
-      <div class="panel-head wrap">
-        <div>
-          <h3>Open Limit Orders</h3>
-          <p class="muted">Limit orders execute when the current price crosses your target.</p>
-        </div>
-        <button class="secondary-btn small" id="checkOrdersBtn" type="button">Check orders</button>
-      </div>
-      <div id="ordersList" class="list-stack empty-safe"></div>
-    </section>
+    <section class="panel full"><div class="panel-head wrap"><div><h3>Open Limit Orders</h3><p class="muted">Limit orders execute when price crosses your target.</p></div><button class="secondary-btn small" id="checkOrdersBtn" type="button">Check orders</button></div><div id="ordersList" class="list-stack"></div></section>
   </main>
-
-  <footer>
-    <strong>StreamStock</strong>
-    <span>Fantasy investing only. Not affiliated with Twitch. No real securities, brokerages, or payouts.</span>
-  </footer>
-
+  <footer><strong>StreamStock</strong><span>Fantasy investing only. Not affiliated with Twitch.</span></footer>
   <script src="app.js"></script>
 </body>
 </html>

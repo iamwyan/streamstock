@@ -92,10 +92,10 @@ function renderTickerTape() {
 
 function renderMarketLists() {
   const row = (s) => `
-    <div class="market-row">
+    <a class="market-row clickable-row" href="streamer.html?ticker=${encodeURIComponent(s.ticker)}">
       <div><strong>${s.name}</strong><p class="muted">${s.ticker} · ${shares(s.subscribers)} subs</p></div>
       <div style="text-align:right"><strong>${money(priceFor(s))}</strong><p class="${s.dayChange >= 0 ? "gain" : "loss"}">${s.dayChange >= 0 ? "+" : ""}${s.dayChange}%</p></div>
-    </div>
+    </a>
   `;
   if (!$("gainersList") || !$("losersList")) return;
   $("gainersList").innerHTML = [...state.streamers].sort((a, b) => b.dayChange - a.dayChange).slice(0, 5).map(row).join("");
@@ -113,7 +113,7 @@ function renderTable() {
       <td>${shares(s.subscribers)}</td>
       <td>${money(priceFor(s))}</td>
       <td class="${s.dayChange >= 0 ? "gain" : "loss"}">${s.dayChange >= 0 ? "+" : ""}${s.dayChange}%</td>
-      <td><button class="row-btn" data-select="${s.ticker}">Trade</button></td>
+      <td><a class="row-btn" href="streamer.html?ticker=${encodeURIComponent(s.ticker)}">Open</a></td>
     </tr>
   `).join("");
 }
@@ -188,6 +188,106 @@ function updateEstimatedTotal() {
   setText("estimatedTotal", money(amount * activePrice));
 }
 
+
+function getTickerFromUrl() {
+  return new URLSearchParams(window.location.search).get("ticker");
+}
+
+function renderStreamerPage() {
+  if (!$('stockName')) return;
+  const urlTicker = (getTickerFromUrl() || state.selectedTicker || defaultStreamers[0].ticker).toUpperCase();
+  const selected = findStreamer(urlTicker) || state.streamers[0];
+  if (!selected) return;
+  state.selectedTicker = selected.ticker;
+  setText('stockName', selected.name);
+  setText('stockTicker', selected.ticker);
+  setText('stockSubs', `${shares(selected.subscribers)} subs`);
+  setText('stockPrice', money(priceFor(selected)));
+  setText('stockDayChange', `${selected.dayChange >= 0 ? '+' : ''}${selected.dayChange}% today`);
+  const changeEl = $('stockDayChange');
+  if (changeEl) changeEl.className = selected.dayChange >= 0 ? 'gain' : 'loss';
+  drawCandleChart(selected);
+}
+
+function seededRandom(seed) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return function() {
+    h += h << 13; h ^= h >>> 7; h += h << 3; h ^= h >>> 17; h += h << 5;
+    return ((h >>> 0) % 10000) / 10000;
+  };
+}
+
+function makeCandles(streamer) {
+  const rand = seededRandom(streamer.ticker + streamer.subscribers + streamer.dayChange);
+  const current = priceFor(streamer);
+  const candles = [];
+  let close = current / (1 + streamer.dayChange / 100 || 1);
+  for (let i = 0; i < 30; i++) {
+    const drift = (streamer.dayChange / 100) / 30;
+    const noise = (rand() - 0.48) * 0.055;
+    const open = close;
+    close = Math.max(0.0001, open * (1 + drift + noise));
+    const high = Math.max(open, close) * (1 + rand() * 0.035);
+    const low = Math.min(open, close) * (1 - rand() * 0.035);
+    candles.push({ open, high, low, close, label: `D${i + 1}` });
+  }
+  const ratio = current / candles[candles.length - 1].close;
+  return candles.map(c => ({ open: c.open * ratio, high: c.high * ratio, low: c.low * ratio, close: c.close * ratio, label: c.label }));
+}
+
+function drawCandleChart(streamer) {
+  const canvas = $('candleChart');
+  if (!canvas) return;
+  const candles = makeCandles(streamer);
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const width = rect.width;
+  const height = 380;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, width, height);
+  const pad = 38;
+  const highs = candles.map(c => c.high);
+  const lows = candles.map(c => c.low);
+  const max = Math.max(...highs) * 1.01;
+  const min = Math.min(...lows) * 0.99;
+  const y = val => height - pad - ((val - min) / Math.max(0.000001, max - min)) * (height - pad * 2);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 5; i++) {
+    const gy = pad + i * ((height - pad * 2) / 4);
+    ctx.beginPath(); ctx.moveTo(pad, gy); ctx.lineTo(width - pad, gy); ctx.stroke();
+  }
+
+  const slot = (width - pad * 2) / candles.length;
+  const bodyW = Math.max(6, slot * 0.54);
+  candles.forEach((c, i) => {
+    const x = pad + i * slot + slot / 2;
+    const up = c.close >= c.open;
+    const color = up ? '#23d18b' : '#ff5470';
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, y(c.high)); ctx.lineTo(x, y(c.low)); ctx.stroke();
+    const top = y(Math.max(c.open, c.close));
+    const bottom = y(Math.min(c.open, c.close));
+    const bodyH = Math.max(3, bottom - top);
+    ctx.globalAlpha = 0.95;
+    ctx.fillRect(x - bodyW / 2, top, bodyW, bodyH);
+    ctx.globalAlpha = 1;
+  });
+
+  ctx.fillStyle = 'rgba(247,251,255,0.82)';
+  ctx.font = '800 12px Inter, system-ui';
+  ctx.fillText(money(candles[candles.length - 1].close), pad, 20);
+  ctx.fillStyle = 'rgba(154,167,187,0.9)';
+  ctx.fillText('30-day demo candles', pad + 120, 20);
+}
+
 function renderAll() {
   renderTickerTape();
   renderMarketLists();
@@ -196,6 +296,7 @@ function renderAll() {
   renderAccount();
   renderPositions();
   renderOrders();
+  renderStreamerPage();
   drawValueChart();
   saveState();
 }
@@ -344,7 +445,7 @@ if ($("tickerForm")) $("tickerForm").addEventListener("submit", (event) => {
   event.target.reset();
   state.selectedTicker = ticker;
   renderAll();
-  location.hash = "trade";
+  location.href = `streamer.html?ticker=${encodeURIComponent(ticker)}`;
 });
 
 if ($("orderType")) $("orderType").addEventListener("change", () => {
@@ -380,6 +481,6 @@ document.addEventListener("click", (event) => {
   }
 });
 
-window.addEventListener("resize", drawValueChart);
+window.addEventListener("resize", () => { drawValueChart(); const s = findStreamer(state.selectedTicker); if (s) drawCandleChart(s); });
 seedHistoryIfNeeded();
 renderAll();

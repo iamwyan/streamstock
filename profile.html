@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Profile | StreamStock</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark">S</span><span>StreamStock</span></a>
+    <nav class="desktop-nav"><a href="index.html">Market</a><a href="portfolio.html">Portfolio</a><a href="profile.html">Profile</a><a href="admin.html">Add Ticker</a></nav>
+    <button class="ghost-btn" id="resetDemoBtn" type="button">Reset demo</button>
+  </header>
+  <main>
+    <section class="page-hero">
+      <div><p class="eyebrow">User profile</p><h1>@demo_trader</h1><p class="muted big-muted">Your StreamStock account profile. Portfolio gets its own page now — no more homepage junk drawer.</p></div>
+      <div class="profile-card panel"><span class="profile-ring large">DT</span><div><strong>Demo Trader</strong><p class="muted">Fantasy account · Browser saved</p></div></div>
+    </section>
+    <section class="profile-grid">
+      <article class="panel"><p class="eyebrow">Account</p><h2>Trading setup</h2><div class="info-list"><div><span>Username</span><strong>@demo_trader</strong></div><div><span>Account Type</span><strong>Fantasy / Demo</strong></div><div><span>Risk Mode</span><strong>Degenerate but fake</strong></div></div></article>
+      <article class="panel"><p class="eyebrow">Summary</p><h2>Wallet</h2><div class="info-list"><div><span>Buying Power</span><strong id="cashBalance">$0.00</strong></div><div><span>Total Account Value</span><strong id="portfolioValue">$0.00</strong></div><div><span>Open Orders</span><strong id="openOrderCount">0</strong></div></div></article>
+    </section>
+  </main>
+  <footer><strong>StreamStock</strong><span>Fantasy investing only. Not affiliated with Twitch.</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>
