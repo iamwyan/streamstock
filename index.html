@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreamStock | Fantasy streamer investing</title>
+  <meta name="description" content="Invest fake currency into Twitch streamers. Track streamer tickers, portfolios, gainers, losers, and orders." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <header class="site-header">
+    <a class="brand" href="#home" aria-label="StreamStock home">
+      <span class="brand-mark">S</span>
+      <span>StreamStock</span>
+    </a>
+    <nav class="desktop-nav">
+      <a href="#market">Market</a>
+      <a href="#trade">Trade</a>
+      <a href="#portfolio">Portfolio</a>
+      <a href="#admin">Add Ticker</a>
+    </nav>
+    <button class="ghost-btn" id="resetDemoBtn" type="button">Reset demo</button>
+  </header>
+
+  <main>
+    <section class="hero" id="home">
+      <div class="hero-copy">
+        <div class="pill">Fantasy markets for Twitch culture</div>
+        <h1>Buy the hype before chat does.</h1>
+        <p>
+          StreamStock lets users invest fake currency into streamer tickers. Prices are driven by subscriber count,
+          with the base formula starting at <strong>1 subscriber = $0.0005</strong> in fake stock value.
+        </p>
+        <div class="hero-actions">
+          <a class="primary-btn" href="#trade">Start trading</a>
+          <a class="secondary-btn" href="#market">View market</a>
+        </div>
+      </div>
+
+      <div class="hero-card glass-card">
+        <div class="hero-card-top">
+          <span>Live demo balance</span>
+          <strong id="cashBalanceHero">$0.00</strong>
+        </div>
+        <div class="ticker-tape" id="tickerTape"></div>
+        <div class="mini-chart" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <p class="muted">No real money. No actual securities. Just fake coins and streamer chaos. Very Wall Street, but with emotes.</p>
+      </div>
+    </section>
+
+    <section class="stats-row" aria-label="Account stats">
+      <article class="stat-card">
+        <span>Portfolio Value</span>
+        <strong id="portfolioValue">$0.00</strong>
+      </article>
+      <article class="stat-card">
+        <span>Buying Power</span>
+        <strong id="cashBalance">$0.00</strong>
+      </article>
+      <article class="stat-card">
+        <span>Total Return</span>
+        <strong id="totalReturn">$0.00</strong>
+      </article>
+      <article class="stat-card">
+        <span>Open Orders</span>
+        <strong id="openOrderCount">0</strong>
+      </article>
+    </section>
+
+    <section class="section-grid" id="market">
+      <div class="section-heading">
+        <p class="eyebrow">Market pulse</p>
+        <h2>Top gainers and losers</h2>
+        <p>Streamer prices update from manually entered subscriber counts. Edit the ticker list in <code>app.js</code> or add one below.</p>
+      </div>
+      <div class="market-lists">
+        <article class="panel">
+          <div class="panel-head">
+            <h3>Top Gainers</h3>
+            <span class="gain">Today</span>
+          </div>
+          <div id="gainersList" class="list-stack"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <h3>Top Losers</h3>
+            <span class="loss">Today</span>
+          </div>
+          <div id="losersList" class="list-stack"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel full" aria-label="Streamer market table">
+      <div class="panel-head wrap">
+        <div>
+          <h3>Streamer Tickers</h3>
+          <p class="muted">Search and select a streamer to load the trading ticket.</p>
+        </div>
+        <input class="search" id="searchInput" type="search" placeholder="Search streamer or ticker..." />
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Streamer</th>
+              <th>Ticker</th>
+              <th>Subscribers</th>
+              <th>Price</th>
+              <th>Day</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tickerTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="trade-layout" id="trade">
+      <article class="panel trade-ticket">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Order ticket</p>
+            <h2 id="selectedName">Select a ticker</h2>
+          </div>
+          <span class="ticker-badge" id="selectedTicker">---</span>
+        </div>
+
+        <form id="tradeForm" class="form-grid">
+          <label>
+            Side
+            <select id="orderSide">
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+            </select>
+          </label>
+          <label>
+            Order Type
+            <select id="orderType">
+              <option value="market">Market</option>
+              <option value="limit">Limit</option>
+            </select>
+          </label>
+          <label>
+            Shares
+            <input id="shareAmount" type="number" min="1" step="1" value="1" />
+          </label>
+          <label id="limitPriceWrap" class="hidden">
+            Limit Price
+            <input id="limitPrice" type="number" min="0" step="0.0001" placeholder="0.0000" />
+          </label>
+          <div class="quote-box">
+            <span>Estimated price</span>
+            <strong id="estimatedPrice">$0.00</strong>
+          </div>
+          <div class="quote-box">
+            <span>Estimated total</span>
+            <strong id="estimatedTotal">$0.00</strong>
+          </div>
+          <button class="primary-btn wide" type="submit">Place Order</button>
+          <p id="tradeMessage" class="form-message"></p>
+        </form>
+      </article>
+
+      <article class="panel" id="portfolio">
+        <div class="panel-head wrap">
+          <div>
+            <p class="eyebrow">User profile</p>
+            <h2>@demo_trader</h2>
+            <p class="muted">Your positions, cost basis, and unrealized P/L.</p>
+          </div>
+          <span class="profile-ring">DT</span>
+        </div>
+        <div id="positionsList" class="list-stack empty-safe"></div>
+      </article>
+    </section>
+
+    <section class="panel full">
+      <div class="panel-head wrap">
+        <div>
+          <h3>Open Limit Orders</h3>
+          <p class="muted">Limit orders execute when the current price crosses your target.</p>
+        </div>
+        <button class="secondary-btn small" id="checkOrdersBtn" type="button">Check orders</button>
+      </div>
+      <div id="ordersList" class="list-stack empty-safe"></div>
+    </section>
+
+    <section class="panel full admin-panel" id="admin">
+      <div class="panel-head wrap">
+        <div>
+          <p class="eyebrow">Manual ticker manager</p>
+          <h2>Add a streamer ticker</h2>
+          <p class="muted">This saves to your browser for the demo. For production, this becomes an admin database table.</p>
+        </div>
+      </div>
+      <form id="tickerForm" class="admin-grid">
+        <label>Streamer Name<input id="newName" required placeholder="Example: Ninja" /></label>
+        <label>Ticker<input id="newTicker" required maxlength="6" placeholder="NINJA" /></label>
+        <label>Subscribers<input id="newSubs" required type="number" min="0" step="1" placeholder="100000" /></label>
+        <label>Day Change %<input id="newChange" required type="number" step="0.01" placeholder="4.20" /></label>
+        <button class="primary-btn" type="submit">Add Ticker</button>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <strong>StreamStock</strong>
+    <span>Fantasy investing only. Not affiliated with Twitch. No real securities, brokerages, or payouts.</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
