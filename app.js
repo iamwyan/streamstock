@@ -243,74 +243,143 @@ function seededRandom(seed) {
   };
 }
 
-function makeCandles(streamer) {
-  const rand = seededRandom(streamer.ticker + streamer.subscribers + streamer.dayChange);
+let activeCandleRange = storage.get("streamstock_candle_range", "1m");
+let candleChartApi = null;
+let candleSeriesApi = null;
+
+const candleRangeConfig = {
+  "1m": { label: "1 minute", count: 120, seconds: 60, volatility: 0.0045 },
+  "5m": { label: "5 minute", count: 120, seconds: 300, volatility: 0.008 },
+  "10m": { label: "10 minute", count: 120, seconds: 600, volatility: 0.012 },
+  "1d": { label: "daily", count: 90, seconds: 86400, volatility: 0.032 },
+  "30d": { label: "30 day", count: 72, seconds: 2592000, volatility: 0.11 }
+};
+
+function makeCandles(streamer, range = activeCandleRange) {
+  const config = candleRangeConfig[range] || candleRangeConfig["1m"];
+  const rand = seededRandom(`${streamer.ticker}-${streamer.subscribers}-${streamer.dayChange}-${range}-${streamer.netFlow}`);
   const current = priceFor(streamer);
   const candles = [];
-  let close = current / (1 + streamer.dayChange / 100 || 1);
-  for (let i = 0; i < 30; i++) {
-    const drift = (streamer.dayChange / 100) / 30;
-    const noise = (rand() - 0.48) * 0.055;
+  const now = Math.floor(Date.now() / 1000);
+  const start = now - (config.count - 1) * config.seconds;
+  let close = current / Math.max(0.35, 1 + Number(streamer.dayChange || 0) / 100);
+  const drift = (Number(streamer.dayChange || 0) / 100) / config.count;
+  const flowBias = clamp(Number(streamer.netFlow || 0) / Number(streamer.liquidity || DEFAULT_LIQUIDITY), -0.18, 0.18) / config.count;
+
+  for (let i = 0; i < config.count; i++) {
     const open = close;
-    close = Math.max(0.0001, open * (1 + drift + noise));
-    const high = Math.max(open, close) * (1 + rand() * 0.035);
-    const low = Math.min(open, close) * (1 - rand() * 0.035);
-    candles.push({ open, high, low, close, label: `D${i + 1}` });
+    const noise = (rand() - 0.49) * config.volatility;
+    close = Math.max(0.0001, open * (1 + drift + flowBias + noise));
+    const wick = config.volatility * (0.3 + rand() * 1.2);
+    const high = Math.max(open, close) * (1 + wick);
+    const low = Math.max(0.0001, Math.min(open, close) * (1 - wick));
+    candles.push({
+      time: start + i * config.seconds,
+      open: Number(open.toFixed(4)),
+      high: Number(high.toFixed(4)),
+      low: Number(low.toFixed(4)),
+      close: Number(close.toFixed(4))
+    });
   }
+
   const ratio = current / candles[candles.length - 1].close;
-  return candles.map(c => ({ open: c.open * ratio, high: c.high * ratio, low: c.low * ratio, close: c.close * ratio, label: c.label }));
+  return candles.map(c => ({
+    ...c,
+    open: Number((c.open * ratio).toFixed(4)),
+    high: Number((c.high * ratio).toFixed(4)),
+    low: Number((c.low * ratio).toFixed(4)),
+    close: Number((c.close * ratio).toFixed(4))
+  }));
 }
 
-function drawCandleChart(streamer) {
-  const canvas = $('candleChart');
-  if (!canvas) return;
-  const candles = makeCandles(streamer);
+function fallbackCandleChart(container, candles) {
+  container.innerHTML = '<canvas id="fallbackCandleCanvas"></canvas>';
+  const canvas = $('fallbackCandleCanvas');
   const ctx = canvas.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
+  const rect = container.getBoundingClientRect();
   const width = rect.width;
-  const height = 380;
+  const height = rect.height || 560;
   canvas.width = width * dpr;
   canvas.height = height * dpr;
+  canvas.style.width = '100%';
+  canvas.style.height = `${height}px`;
   ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, width, height);
-  const pad = 38;
-  const highs = candles.map(c => c.high);
-  const lows = candles.map(c => c.low);
-  const max = Math.max(...highs) * 1.01;
-  const min = Math.min(...lows) * 0.99;
+  const pad = 46;
+  const max = Math.max(...candles.map(c => c.high)) * 1.01;
+  const min = Math.min(...candles.map(c => c.low)) * 0.99;
   const y = val => height - pad - ((val - min) / Math.max(0.000001, max - min)) * (height - pad * 2);
-
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 5; i++) {
-    const gy = pad + i * ((height - pad * 2) / 4);
+  ctx.clearRect(0, 0, width, height);
+  ctx.strokeStyle = 'rgba(15, 23, 42, 0.12)';
+  for (let i = 0; i < 6; i++) {
+    const gy = pad + i * ((height - pad * 2) / 5);
     ctx.beginPath(); ctx.moveTo(pad, gy); ctx.lineTo(width - pad, gy); ctx.stroke();
   }
-
-  const slot = (width - pad * 2) / candles.length;
-  const bodyW = Math.max(6, slot * 0.54);
-  candles.forEach((c, i) => {
+  const visible = candles.slice(-Math.min(80, candles.length));
+  const slot = (width - pad * 2) / visible.length;
+  const bodyW = Math.max(5, slot * 0.58);
+  visible.forEach((c, i) => {
     const x = pad + i * slot + slot / 2;
     const up = c.close >= c.open;
-    const color = up ? '#23d18b' : '#ff5470';
+    const color = up ? '#12805c' : '#b42318';
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.8;
     ctx.beginPath(); ctx.moveTo(x, y(c.high)); ctx.lineTo(x, y(c.low)); ctx.stroke();
     const top = y(Math.max(c.open, c.close));
     const bottom = y(Math.min(c.open, c.close));
-    const bodyH = Math.max(3, bottom - top);
-    ctx.globalAlpha = 0.95;
-    ctx.fillRect(x - bodyW / 2, top, bodyW, bodyH);
-    ctx.globalAlpha = 1;
+    ctx.fillRect(x - bodyW / 2, top, bodyW, Math.max(3, bottom - top));
   });
+}
 
-  ctx.fillStyle = 'rgba(247,251,255,0.82)';
-  ctx.font = '800 12px Inter, system-ui';
-  ctx.fillText(money(candles[candles.length - 1].close), pad, 20);
-  ctx.fillStyle = 'rgba(154,167,187,0.9)';
-  ctx.fillText('30-day demo candles', pad + 120, 20);
+function drawCandleChart(streamer) {
+  const container = $('candleChart');
+  if (!container) return;
+  const candles = makeCandles(streamer, activeCandleRange);
+  const config = candleRangeConfig[activeCandleRange] || candleRangeConfig["1m"];
+  document.querySelectorAll('.tf-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.range === activeCandleRange));
+
+  if (!window.LightweightCharts) {
+    fallbackCandleChart(container, candles);
+    return;
+  }
+
+  const rect = container.getBoundingClientRect();
+  if (!candleChartApi) {
+    candleChartApi = LightweightCharts.createChart(container, {
+      width: Math.max(320, Math.floor(rect.width)),
+      height: 560,
+      layout: {
+        background: { type: 'solid', color: '#ffffff' },
+        textColor: '#334155',
+        fontFamily: 'Inter, system-ui, sans-serif'
+      },
+      grid: {
+        vertLines: { color: '#edf2f7' },
+        horzLines: { color: '#edf2f7' }
+      },
+      rightPriceScale: { borderColor: '#d7dde7', scaleMargins: { top: 0.12, bottom: 0.12 } },
+      timeScale: { borderColor: '#d7dde7', timeVisible: true, secondsVisible: false, rightOffset: 8, barSpacing: 8 },
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
+      handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true }
+    });
+    candleSeriesApi = candleChartApi.addCandlestickSeries({
+      upColor: '#12805c',
+      downColor: '#b42318',
+      borderUpColor: '#12805c',
+      borderDownColor: '#b42318',
+      wickUpColor: '#12805c',
+      wickDownColor: '#b42318',
+      priceFormat: { type: 'price', precision: 4, minMove: 0.0001 }
+    });
+  } else {
+    candleChartApi.applyOptions({ width: Math.max(320, Math.floor(rect.width)), height: 560 });
+  }
+
+  candleSeriesApi.setData(candles);
+  candleChartApi.timeScale().fitContent();
+  setText('chartRangeLabel', config.label);
 }
 
 function renderAll() {
@@ -442,6 +511,16 @@ function drawValueChart() {
   ctx.fillText("latest", pad + 112, 18);
 }
 
+
+if ($("timeframeTabs")) $("timeframeTabs").addEventListener("click", (event) => {
+  const btn = event.target.closest(".tf-btn");
+  if (!btn) return;
+  activeCandleRange = btn.dataset.range || "1m";
+  storage.set("streamstock_candle_range", activeCandleRange);
+  const streamer = findStreamer(state.selectedTicker);
+  if (streamer) drawCandleChart(streamer);
+});
+
 if ($("tradeForm")) $("tradeForm").addEventListener("submit", (event) => {
   event.preventDefault();
   const side = $("orderSide").value;
@@ -512,6 +591,6 @@ document.addEventListener("click", (event) => {
   }
 });
 
-window.addEventListener("resize", () => { drawValueChart(); const s = findStreamer(state.selectedTicker); if (s) drawCandleChart(s); });
+window.addEventListener("resize", () => { drawValueChart(); if (candleChartApi && $("candleChart")) candleChartApi.applyOptions({ width: Math.max(320, Math.floor($("candleChart").getBoundingClientRect().width)), height: 560 }); const s = findStreamer(state.selectedTicker); if (s) drawCandleChart(s); });
 seedHistoryIfNeeded();
 renderAll();

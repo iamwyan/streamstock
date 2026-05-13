@@ -32,7 +32,14 @@
           </div>
         </div>
         <div class="chart-with-info">
-          <canvas id="candleChart" height="380"></canvas>
+          <div class="timeframe-tabs" id="timeframeTabs">
+            <button type="button" class="tf-btn active" data-range="1m">1m</button>
+            <button type="button" class="tf-btn" data-range="5m">5m</button>
+            <button type="button" class="tf-btn" data-range="10m">10m</button>
+            <button type="button" class="tf-btn" data-range="1d">Day</button>
+            <button type="button" class="tf-btn" data-range="30d">30 Day</button>
+          </div>
+          <div id="candleChart" class="candle-chart-shell" aria-label="Candlestick chart"></div>
           <aside class="price-info-card">
             <p class="eyebrow">Live quote</p>
             <h3 id="stockPriceInline">Current price</h3>
@@ -61,6 +68,7 @@
     </section>
   </main>
   <footer><strong>StreamStock</strong><span>Fantasy investing only. Not affiliated with Twitch.</span></footer>
+  <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

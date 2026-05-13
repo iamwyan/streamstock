@@ -28,3 +28,10 @@ Ticker adding is intentionally not user-facing. Edit the `defaultStreamers` arra
 ## Deploying
 
 Upload these files to GitHub, then import the repo into Vercel. No build command is required.
+
+## v5 updates
+- Streamer detail page redesigned with a Fidelity-inspired brokerage layout.
+- Large interactive candlestick chart uses Lightweight Charts from CDN.
+- Timeframe buttons: 1m, 5m, 10m, Day, 30 Day.
+- Chart supports mouse wheel zoom, drag scrolling, touch drag, and pinch zoom.
+- Current quote/fundamental/flow information sits next to the candlestick chart.

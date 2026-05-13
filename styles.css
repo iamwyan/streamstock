@@ -435,3 +435,170 @@ select option { background:#ffffff !important; color:#07111f !important; }
   line-height: 1.45;
 }
 @media (max-width: 1100px) { .chart-with-info { grid-template-columns: 1fr; } }
+
+/* v5 Fidelity-inspired brokerage refresh */
+:root {
+  --bg: #f5f7f4;
+  --bg-soft: #eef3ed;
+  --card: #ffffff;
+  --card-solid: #ffffff;
+  --line: #d9e1d6;
+  --text: #172318;
+  --muted: #647067;
+  --accent: #0a6b3a;
+  --accent-2: #17894b;
+  --gain: #12805c;
+  --loss: #b42318;
+  --warning: #8a5b00;
+  --shadow: 0 16px 42px rgba(19, 47, 28, 0.08);
+}
+body {
+  color: var(--text);
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f6f8f4 42%, #eef3ed 100%);
+}
+.bg-grid { display: none; }
+.site-header {
+  background: rgba(255,255,255,.94);
+  border-bottom: 1px solid #d8e2d3;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, .05);
+  backdrop-filter: blur(14px);
+}
+.brand { letter-spacing: -0.03em; }
+.brand-mark, .profile-ring {
+  border-radius: .35rem;
+  background: #0a6b3a;
+  box-shadow: none;
+}
+.desktop-nav { color: #49564d; }
+.desktop-nav a:hover { color: #0a6b3a; }
+.pill, .eyebrow {
+  color: #0a6b3a;
+  border-color: #c8dcc4;
+  background: #eef7ec;
+}
+h1, h2 { letter-spacing: -0.055em; }
+.primary-btn {
+  color: #fff;
+  background: #0a6b3a;
+  box-shadow: 0 10px 22px rgba(10, 107, 58, .16);
+}
+.primary-btn:hover { background: #075a30; }
+.secondary-btn, .ghost-btn {
+  color: #172318;
+  background: #fff;
+  border: 1px solid #ccd7c8;
+}
+.glass-card, .panel, .stat-card {
+  background: #ffffff;
+  border: 1px solid #d8e2d3;
+  border-radius: .45rem;
+  box-shadow: var(--shadow);
+  backdrop-filter: none;
+}
+.tape-item, .market-row, .position-row, .order-row, .quote-box, .info-list div, .price-info-card {
+  background: #fbfcfa;
+  border-color: #dde6d9;
+  border-radius: .35rem;
+}
+.ticker-badge {
+  background: #eef7ec;
+  border-color: #c8dcc4;
+  color: #0a6b3a;
+  border-radius: .25rem;
+}
+.search, input, select {
+  color: #172318 !important;
+  background: #ffffff !important;
+  border-color: #bfcabd;
+  border-radius: .3rem;
+}
+select option { color: #172318 !important; background: #ffffff !important; }
+input:focus, select:focus { border-color: #0a6b3a; box-shadow: 0 0 0 3px rgba(10,107,58,.12); }
+th, td { border-bottom-color: #e1e8df; }
+tr:hover td { background: #f8faf7; }
+.row-btn { color: #0a6b3a; background: #eef7ec; border-color: #b9d5b4; }
+footer { border-top-color: #d8e2d3; }
+
+.stock-hero {
+  grid-template-columns: minmax(0, 1fr) 360px;
+  align-items: stretch;
+  padding-top: 2.7rem;
+}
+.stock-hero h1 { font-size: clamp(2.5rem, 6vw, 5.4rem); }
+.stock-price-card strong { color: #0a6b3a; }
+.streamer-layout {
+  width: min(1500px, calc(100vw - 2rem));
+  margin-left: 50%;
+  transform: translateX(-50%);
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+.chart-panel { padding: 1rem; }
+.chart-with-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-areas:
+    "tabs quote"
+    "chart quote";
+  gap: .9rem 1rem;
+  align-items: stretch;
+}
+.timeframe-tabs {
+  grid-area: tabs;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  align-items: center;
+  padding: .35rem;
+  background: #f3f6f1;
+  border: 1px solid #dbe5d8;
+  border-radius: .35rem;
+  width: fit-content;
+}
+.tf-btn {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #405047;
+  border-radius: .25rem;
+  padding: .5rem .72rem;
+  font-weight: 800;
+}
+.tf-btn:hover { color: #0a6b3a; background: #fff; border-color: #d4dfd0; }
+.tf-btn.active { color: #fff; background: #0a6b3a; border-color: #0a6b3a; }
+.candle-chart-shell {
+  grid-area: chart;
+  width: 100%;
+  min-height: 560px;
+  border: 1px solid #d7dde7;
+  border-radius: .35rem;
+  overflow: hidden;
+  background: #fff;
+}
+.price-info-card {
+  grid-area: quote;
+  padding: 1rem;
+  align-self: stretch;
+}
+.price-info-card h3 {
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  color: #0a6b3a;
+  letter-spacing: -.055em;
+}
+.compact-info div { background: #fff; }
+.trade-ticket { position: sticky; top: 5.5rem; }
+.form-message { color: #475648; }
+.back-link { color: #536057; }
+.back-link:hover { color: #0a6b3a; }
+.gain { color: #12805c; }
+.loss { color: #b42318; }
+
+@media (max-width: 1100px) {
+  .streamer-layout { width: min(100% - 1rem, 1180px); grid-template-columns: 1fr; transform:none; margin-left:auto; }
+  .trade-ticket { position: static; }
+  .chart-with-info { grid-template-columns: 1fr; grid-template-areas: "tabs" "chart" "quote"; }
+  .price-info-card { align-self: auto; }
+}
+@media (max-width: 900px) {
+  .stock-hero { grid-template-columns: 1fr; }
+  .candle-chart-shell { min-height: 460px; }
+}
