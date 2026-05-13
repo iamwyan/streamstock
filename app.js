@@ -1,15 +1,17 @@
-const SUBSCRIBER_TO_PRICE = 0.0005; // User rule: 1 subscriber = 0.05 cents = $0.0005 fake value.
+const SUBSCRIBER_TO_PRICE = 0.0005; // 1 subscriber = 0.05 cents = $0.0005 baseline/fundamental value.
 const STARTING_CASH = 10000;
+const DEFAULT_LIQUIDITY = 25000; // Higher liquidity = user money moves the price less aggressively.
+const MAX_FLOW_MOVE = 0.65; // Keeps demo prices from going nuclear after one big trade.
 
 const defaultStreamers = [
-  { name: "Kai Cenat", ticker: "KAI", subscribers: 165000, dayChange: 8.24 },
-  { name: "xQc", ticker: "XQC", subscribers: 98000, dayChange: -2.15 },
-  { name: "Pokimane", ticker: "POKI", subscribers: 82000, dayChange: 3.4 },
-  { name: "IShowSpeed", ticker: "SPEED", subscribers: 121000, dayChange: 11.88 },
-  { name: "Ludwig", ticker: "LUD", subscribers: 62000, dayChange: 1.25 },
-  { name: "HasanAbi", ticker: "HASAN", subscribers: 71000, dayChange: -4.7 },
-  { name: "Ninja", ticker: "NINJA", subscribers: 53000, dayChange: -1.35 },
-  { name: "Tarik", ticker: "TARIK", subscribers: 74000, dayChange: 5.72 }
+  { name: "Kai Cenat", ticker: "KAI", subscribers: 165000, dayChange: 8.24, netFlow: 4200, liquidity: 36000 },
+  { name: "xQc", ticker: "XQC", subscribers: 98000, dayChange: -2.15, netFlow: -1300, liquidity: 28000 },
+  { name: "Pokimane", ticker: "POKI", subscribers: 82000, dayChange: 3.4, netFlow: 1600, liquidity: 25000 },
+  { name: "IShowSpeed", ticker: "SPEED", subscribers: 121000, dayChange: 11.88, netFlow: 5200, liquidity: 30000 },
+  { name: "Ludwig", ticker: "LUD", subscribers: 62000, dayChange: 1.25, netFlow: 500, liquidity: 22000 },
+  { name: "HasanAbi", ticker: "HASAN", subscribers: 71000, dayChange: -4.7, netFlow: -2400, liquidity: 24000 },
+  { name: "Ninja", ticker: "NINJA", subscribers: 53000, dayChange: -1.35, netFlow: -650, liquidity: 21000 },
+  { name: "Tarik", ticker: "TARIK", subscribers: 74000, dayChange: 5.72, netFlow: 2100, liquidity: 24000 }
 ];
 
 const storage = {
@@ -29,11 +31,24 @@ let state = {
   selectedTicker: storage.get("streamstock_selected", defaultStreamers[0].ticker)
 };
 
+state.streamers = state.streamers.map((streamer) => ({
+  ...streamer,
+  netFlow: Number(streamer.netFlow || 0),
+  liquidity: Number(streamer.liquidity || DEFAULT_LIQUIDITY)
+}));
+
 const $ = (id) => document.getElementById(id);
 const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
 const money = (num) => `$${Number(num || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
 const shares = (num) => Number(num || 0).toLocaleString();
-const priceFor = (streamer) => streamer.subscribers * SUBSCRIBER_TO_PRICE;
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const fundamentalPriceFor = (streamer) => streamer.subscribers * SUBSCRIBER_TO_PRICE;
+const flowMultiplierFor = (streamer) => {
+  const liquidity = Number(streamer.liquidity || DEFAULT_LIQUIDITY);
+  const netFlow = Number(streamer.netFlow || 0);
+  return 1 + clamp(netFlow / liquidity, -MAX_FLOW_MOVE, MAX_FLOW_MOVE);
+};
+const priceFor = (streamer) => fundamentalPriceFor(streamer) * flowMultiplierFor(streamer);
 const findStreamer = (ticker) => state.streamers.find((s) => s.ticker === ticker);
 
 function saveState() {
@@ -93,7 +108,7 @@ function renderTickerTape() {
 function renderMarketLists() {
   const row = (s) => `
     <a class="market-row clickable-row" href="streamer.html?ticker=${encodeURIComponent(s.ticker)}">
-      <div><strong>${s.name}</strong><p class="muted">${s.ticker} · ${shares(s.subscribers)} subs</p></div>
+      <div><strong>${s.name}</strong><p class="muted">${s.ticker} · ${shares(s.subscribers)} subs · flow ${money(s.netFlow || 0)}</p></div>
       <div style="text-align:right"><strong>${money(priceFor(s))}</strong><p class="${s.dayChange >= 0 ? "gain" : "loss"}">${s.dayChange >= 0 ? "+" : ""}${s.dayChange}%</p></div>
     </a>
   `;
@@ -202,7 +217,17 @@ function renderStreamerPage() {
   setText('stockName', selected.name);
   setText('stockTicker', selected.ticker);
   setText('stockSubs', `${shares(selected.subscribers)} subs`);
-  setText('stockPrice', money(priceFor(selected)));
+  const currentPrice = priceFor(selected);
+  const fundamental = fundamentalPriceFor(selected);
+  const multiplier = flowMultiplierFor(selected);
+  const netFlow = Number(selected.netFlow || 0);
+  setText('stockPrice', money(currentPrice));
+  setText('stockPriceInline', money(currentPrice));
+  setText('stockFundamental', money(fundamental));
+  setText('stockMarketPressure', `${multiplier >= 1 ? '+' : ''}${((multiplier - 1) * 100).toFixed(2)}%`);
+  setText('stockNetFlow', money(netFlow));
+  setText('stockLiquidity', money(selected.liquidity || DEFAULT_LIQUIDITY));
+  setText('stockFormula', `${money(fundamental)} × ${multiplier.toFixed(3)} pressure = ${money(currentPrice)}`);
   setText('stockDayChange', `${selected.dayChange >= 0 ? '+' : ''}${selected.dayChange}% today`);
   const changeEl = $('stockDayChange');
   if (changeEl) changeEl.className = selected.dayChange >= 0 ? 'gain' : 'loss';
@@ -314,6 +339,8 @@ function placeMarketOrder(side, ticker, amount) {
     const newAverage = ((existing.shares * existing.averageCost) + total) / newShares;
     state.positions[ticker] = { shares: newShares, averageCost: newAverage };
     state.cash -= total;
+    streamer.netFlow = Number(streamer.netFlow || 0) + total;
+    streamer.dayChange = Number((((priceFor(streamer) / price) - 1) * 100).toFixed(2));
     recordHistoryPoint();
     return `Bought ${shares(amount)} ${ticker} at ${money(price)}.`;
   }
@@ -322,6 +349,8 @@ function placeMarketOrder(side, ticker, amount) {
   if (!existing || existing.shares < amount) return "You do not own enough shares to sell.";
   existing.shares -= amount;
   state.cash += total;
+  streamer.netFlow = Number(streamer.netFlow || 0) - total;
+  streamer.dayChange = Number((((priceFor(streamer) / price) - 1) * 100).toFixed(2));
   if (existing.shares <= 0) delete state.positions[ticker];
   recordHistoryPoint();
   return `Sold ${shares(amount)} ${ticker} at ${money(price)}.`;
@@ -440,7 +469,9 @@ if ($("tickerForm")) $("tickerForm").addEventListener("submit", (event) => {
     name: $("newName").value.trim(),
     ticker,
     subscribers: Number($("newSubs").value || 0),
-    dayChange: Number($("newChange").value || 0)
+    dayChange: Number($("newChange").value || 0),
+    netFlow: 0,
+    liquidity: DEFAULT_LIQUIDITY
   });
   event.target.reset();
   state.selectedTicker = ticker;

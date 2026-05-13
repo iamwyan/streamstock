@@ -13,17 +13,39 @@
   <div class="bg-grid"></div>
   <header class="site-header">
     <a class="brand" href="index.html"><span class="brand-mark">S</span><span>StreamStock</span></a>
-    <nav class="desktop-nav"><a href="index.html">Market</a><a href="portfolio.html">Portfolio</a><a href="profile.html">Profile</a><a href="admin.html">Add Ticker</a></nav>
+    <nav class="desktop-nav"><a href="index.html">Market</a><a href="portfolio.html">Portfolio</a><a href="profile.html">Profile</a></nav>
     <button class="ghost-btn" id="resetDemoBtn" type="button">Reset demo</button>
   </header>
   <main>
     <section class="stock-hero">
       <div><a class="back-link" href="index.html">← Back to market</a><p class="eyebrow">Streamer stock</p><h1 id="stockName">Streamer</h1><div class="stock-meta"><span class="ticker-badge" id="stockTicker">---</span><span id="stockSubs">0 subs</span><span id="stockDayChange">0%</span></div></div>
-      <div class="stock-price-card panel"><span>Current price</span><strong id="stockPrice">$0.00</strong><p class="muted">Based on subscriber count × $0.0005.</p></div>
+      <div class="stock-price-card panel"><span>Current price</span><strong id="stockPrice">$0.00</strong><p class="muted">Subscriber value plus market pressure from fake buy/sell flow.</p></div>
     </section>
 
     <section class="streamer-layout">
-      <article class="panel chart-panel candle-panel"><div class="panel-head wrap"><div><p class="eyebrow">Price action</p><h2>Candlestick chart</h2><p class="muted">Demo OHLC candles generated from subscriber-based stock value and daily movement.</p></div></div><canvas id="candleChart" height="380"></canvas></article>
+      <article class="panel chart-panel candle-panel">
+        <div class="panel-head wrap">
+          <div>
+            <p class="eyebrow">Price action</p>
+            <h2>Candlestick chart</h2>
+            <p class="muted">OHLC demo candles built from subscriber fundamentals plus fake market pressure.</p>
+          </div>
+        </div>
+        <div class="chart-with-info">
+          <canvas id="candleChart" height="380"></canvas>
+          <aside class="price-info-card">
+            <p class="eyebrow">Live quote</p>
+            <h3 id="stockPriceInline">Current price</h3>
+            <div class="info-list compact-info">
+              <div><span>Fundamental value</span><strong id="stockFundamental">$0.00</strong></div>
+              <div><span>Market pressure</span><strong id="stockMarketPressure">0.00%</strong></div>
+              <div><span>Net money flow</span><strong id="stockNetFlow">$0.00</strong></div>
+              <div><span>Liquidity pool</span><strong id="stockLiquidity">$0.00</strong></div>
+            </div>
+            <p class="muted formula-note" id="stockFormula">Baseline × pressure = current price</p>
+          </aside>
+        </div>
+      </article>
       <article class="panel trade-ticket"><div class="panel-head"><div><p class="eyebrow">Order ticket</p><h2 id="selectedName">Select a ticker</h2></div><span class="ticker-badge" id="selectedTicker">---</span></div>
         <form id="tradeForm" class="form-grid vertical-form">
           <label>Side<select id="orderSide"><option value="buy">Buy</option><option value="sell">Sell</option></select></label>

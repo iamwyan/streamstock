@@ -1,42 +1,30 @@
 # StreamStock
 
-A clean static prototype for a fantasy Twitch streamer investing website.
+Fantasy stock-market prototype for Twitch streamers. Built as a static Vercel/GitHub site with fake currency, streamer tickers, portfolio pages, profile page, candlestick streamer detail pages, market and limit orders, and browser-based demo storage.
 
-## Features
+## Pages
 
-- Fake currency trading dashboard
-- Streamer tickers based on subscriber count
-- Price formula: `1 subscriber = $0.0005` fake stock value
-- Top gainers and losers
-- User profile / portfolio view
-- Buy and sell market orders
-- Buy and sell limit orders
-- Manual ticker manager
-- Browser localStorage demo state
-- Mobile and desktop responsive design
+- `index.html` — market overview, top gainers/losers, streamer table
+- `streamer.html?ticker=KAI` — dedicated streamer stock page with candlestick chart, quote info, and trade ticket
+- `portfolio.html` — user holdings, account value chart, open orders
+- `profile.html` — user profile/account summary
 
-## How to edit streamer tickers
+## Pricing model
 
-Open `app.js` and edit the `defaultStreamers` array:
+Each streamer has a baseline/fundamental price from subscriber count:
 
-```js
-const defaultStreamers = [
-  { name: "Kai Cenat", ticker: "KAI", subscribers: 165000, dayChange: 8.24 }
-];
-```
+`subscriber count × $0.0005`
 
-The app also includes an on-page ticker manager. Tickers added there are saved in your browser only.
+The current market price then moves based on fake currency flowing into or out of that streamer:
 
-## Deploy to Vercel
+`current price = fundamental value × market pressure multiplier`
 
-1. Upload this folder to a GitHub repo.
-2. Go to Vercel.
-3. Import the repo.
-4. Framework preset: **Other** or **Static**.
-5. Deploy.
+Buying shares increases the streamer's `netFlow`, which can push the price up. Selling shares decreases `netFlow`, which can push the price down. Each streamer also has a `liquidity` value so larger streamers are harder to move.
 
-No build command is required.
+## Adding tickers
 
-## Production notes
+Ticker adding is intentionally not user-facing. Edit the `defaultStreamers` array inside `app.js` to add or remove streamers. In a real production version, this would live behind an admin/backend dashboard connected to a database.
 
-This is a front-end prototype. For real accounts, persistent users, admin-only ticker controls, leaderboards, and secure trading logic, connect it to a backend such as Supabase, Firebase, or a custom Node/Express API.
+## Deploying
+
+Upload these files to GitHub, then import the repo into Vercel. No build command is required.

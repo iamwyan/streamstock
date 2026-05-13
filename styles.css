@@ -402,3 +402,36 @@ input::placeholder {
 select { background-color:#101827 !important; color:#f7fbff !important; }
 select option { background:#ffffff !important; color:#07111f !important; }
 @media (max-width: 900px) { .stock-hero, .streamer-layout, .profile-grid { grid-template-columns:1fr; } .stock-price-card { justify-self:stretch; } }
+
+/* v4 market model + backend ticker cleanup */
+.chart-with-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 1rem;
+  align-items: stretch;
+  margin-top: 1rem;
+}
+.chart-with-info canvas { margin-top: 0; }
+.price-info-card {
+  border: 1px solid rgba(255,255,255,0.075);
+  background: rgba(255,255,255,0.045);
+  border-radius: 1.1rem;
+  padding: 1rem;
+}
+.price-info-card h3 {
+  margin: .2rem 0 .8rem;
+  font-size: 1.2rem;
+}
+.compact-info { gap: .55rem; }
+.compact-info div {
+  align-items: flex-start;
+  flex-direction: column;
+  padding: .75rem;
+}
+.compact-info strong { color: var(--text); }
+.formula-note {
+  margin-top: .85rem;
+  font-size: .82rem;
+  line-height: 1.45;
+}
+@media (max-width: 1100px) { .chart-with-info { grid-template-columns: 1fr; } }
