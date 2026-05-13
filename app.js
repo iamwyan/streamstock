@@ -1,17 +1,25 @@
-const SUBSCRIBER_TO_PRICE = 0.0005; // 1 subscriber = 0.05 cents = $0.0005 baseline/fundamental value.
 const STARTING_CASH = 10000;
 const DEFAULT_LIQUIDITY = 25000; // Higher liquidity = user money moves the price less aggressively.
-const MAX_FLOW_MOVE = 0.65; // Keeps demo prices from going nuclear after one big trade.
+const MAX_FLOW_MOVE = 0.65; // Keeps prototype prices from going nuclear after one big trade.
+
+// New StreamStock pricing foundation:
+// Followers + Avg Viewers + Stream Hours + Recent Growth + Market Demand
+const PRICE_WEIGHTS = {
+  followers: 0.000025,      // large audience foundation
+  avgViewers: 0.018,        // live attention is stronger than raw followers
+  streamHours: 0.085,       // consistency bonus
+  growth: 0.65              // recent growth percentage bonus
+};
 
 const defaultStreamers = [
-  { name: "Kai Cenat", ticker: "KAI", subscribers: 165000, dayChange: 8.24, netFlow: 4200, liquidity: 36000 },
-  { name: "xQc", ticker: "XQC", subscribers: 98000, dayChange: -2.15, netFlow: -1300, liquidity: 28000 },
-  { name: "Pokimane", ticker: "POKI", subscribers: 82000, dayChange: 3.4, netFlow: 1600, liquidity: 25000 },
-  { name: "IShowSpeed", ticker: "SPEED", subscribers: 121000, dayChange: 11.88, netFlow: 5200, liquidity: 30000 },
-  { name: "Ludwig", ticker: "LUD", subscribers: 62000, dayChange: 1.25, netFlow: 500, liquidity: 22000 },
-  { name: "HasanAbi", ticker: "HASAN", subscribers: 71000, dayChange: -4.7, netFlow: -2400, liquidity: 24000 },
-  { name: "Ninja", ticker: "NINJA", subscribers: 53000, dayChange: -1.35, netFlow: -650, liquidity: 21000 },
-  { name: "Tarik", ticker: "TARIK", subscribers: 74000, dayChange: 5.72, netFlow: 2100, liquidity: 24000 }
+  { name: "Kai Cenat", ticker: "KAI", followers: 15200000, avgViewers: 82000, streamHours: 178, recentGrowth: 12.4, dayChange: 8.24, netFlow: 4200, liquidity: 36000 },
+  { name: "xQc", ticker: "XQC", followers: 12100000, avgViewers: 46000, streamHours: 132, recentGrowth: -1.7, dayChange: -2.15, netFlow: -1300, liquidity: 28000 },
+  { name: "Pokimane", ticker: "POKI", followers: 9400000, avgViewers: 19000, streamHours: 64, recentGrowth: 3.8, dayChange: 3.4, netFlow: 1600, liquidity: 25000 },
+  { name: "IShowSpeed", ticker: "SPEED", followers: 35000000, avgViewers: 118000, streamHours: 96, recentGrowth: 18.2, dayChange: 11.88, netFlow: 5200, liquidity: 30000 },
+  { name: "Ludwig", ticker: "LUD", followers: 6400000, avgViewers: 24000, streamHours: 82, recentGrowth: 2.6, dayChange: 1.25, netFlow: 500, liquidity: 22000 },
+  { name: "HasanAbi", ticker: "HASAN", followers: 2900000, avgViewers: 31000, streamHours: 190, recentGrowth: -4.2, dayChange: -4.7, netFlow: -2400, liquidity: 24000 },
+  { name: "Ninja", ticker: "NINJA", followers: 19000000, avgViewers: 14500, streamHours: 58, recentGrowth: -2.1, dayChange: -1.35, netFlow: -650, liquidity: 21000 },
+  { name: "Tarik", ticker: "TARIK", followers: 3500000, avgViewers: 53000, streamHours: 150, recentGrowth: 7.4, dayChange: 5.72, netFlow: 2100, liquidity: 24000 }
 ];
 
 const storage = {
@@ -33,6 +41,11 @@ let state = {
 
 state.streamers = state.streamers.map((streamer) => ({
   ...streamer,
+  // Backwards compatibility for older StreamStock demo data that only had subscribers.
+  followers: Number(streamer.followers ?? (streamer.subscribers || 50000) * 120),
+  avgViewers: Number(streamer.avgViewers ?? Math.max(250, Math.round((streamer.subscribers || 50000) * 0.34))),
+  streamHours: Number(streamer.streamHours ?? 90),
+  recentGrowth: Number(streamer.recentGrowth ?? streamer.dayChange ?? 0),
   netFlow: Number(streamer.netFlow || 0),
   liquidity: Number(streamer.liquidity || DEFAULT_LIQUIDITY)
 }));
@@ -50,7 +63,15 @@ const setText = (id, value) => { const el = $(id); if (el) el.textContent = valu
 const money = (num) => `$${Number(num || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
 const shares = (num) => Number(num || 0).toLocaleString();
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-const fundamentalPriceFor = (streamer) => streamer.subscribers * SUBSCRIBER_TO_PRICE;
+function fundamentalsFor(streamer) {
+  const followerValue = Number(streamer.followers || 0) * PRICE_WEIGHTS.followers;
+  const viewerValue = Number(streamer.avgViewers || 0) * PRICE_WEIGHTS.avgViewers;
+  const hoursValue = Number(streamer.streamHours || 0) * PRICE_WEIGHTS.streamHours;
+  const growthValue = Math.max(-20, Number(streamer.recentGrowth || 0)) * PRICE_WEIGHTS.growth;
+  const base = Math.max(0.25, followerValue + viewerValue + hoursValue + growthValue);
+  return { followerValue, viewerValue, hoursValue, growthValue, base };
+}
+const fundamentalPriceFor = (streamer) => fundamentalsFor(streamer).base;
 const flowMultiplierFor = (streamer) => {
   const liquidity = Number(streamer.liquidity || DEFAULT_LIQUIDITY);
   const netFlow = Number(streamer.netFlow || 0);
@@ -116,7 +137,7 @@ function renderTickerTape() {
 function renderMarketLists() {
   const row = (s) => `
     <a class="market-row clickable-row" href="streamer.html?ticker=${encodeURIComponent(s.ticker)}">
-      <div><strong>${s.name}</strong><p class="muted">${s.ticker} · ${shares(s.subscribers)} subs · flow ${money(s.netFlow || 0)}</p></div>
+      <div><strong>${s.name}</strong><p class="muted">${s.ticker} · ${shares(s.followers)} followers · ${shares(s.avgViewers)} avg viewers</p></div>
       <div style="text-align:right"><strong>${money(priceFor(s))}</strong><p class="${s.dayChange >= 0 ? "gain" : "loss"}">${s.dayChange >= 0 ? "+" : ""}${s.dayChange}%</p></div>
     </a>
   `;
@@ -133,7 +154,7 @@ function renderTable() {
     <tr>
       <td><strong>${s.name}</strong></td>
       <td><span class="ticker-badge">${s.ticker}</span></td>
-      <td>${shares(s.subscribers)}</td>
+      <td>${shares(s.followers)}</td>
       <td>${money(priceFor(s))}</td>
       <td class="${s.dayChange >= 0 ? "gain" : "loss"}">${s.dayChange >= 0 ? "+" : ""}${s.dayChange}%</td>
       <td><a class="row-btn" href="streamer.html?ticker=${encodeURIComponent(s.ticker)}">Open</a></td>
@@ -224,9 +245,14 @@ function renderStreamerPage() {
   state.selectedTicker = selected.ticker;
   setText('stockName', selected.name);
   setText('stockTicker', selected.ticker);
-  setText('stockSubs', `${shares(selected.subscribers)} subs`);
+  setText('stockSubs', `${shares(selected.followers)} followers`);
   const currentPrice = priceFor(selected);
   const fundamental = fundamentalPriceFor(selected);
+  const f = fundamentalsFor(selected);
+  setText('stockFollowers', shares(selected.followers));
+  setText('stockAvgViewers', shares(selected.avgViewers));
+  setText('stockStreamHours', `${shares(selected.streamHours)} hrs / month`);
+  setText('stockRecentGrowth', `${selected.recentGrowth >= 0 ? '+' : ''}${Number(selected.recentGrowth || 0).toFixed(1)}%`);
   const multiplier = flowMultiplierFor(selected);
   const netFlow = Number(selected.netFlow || 0);
   setText('stockPrice', money(currentPrice));
@@ -235,7 +261,7 @@ function renderStreamerPage() {
   setText('stockMarketPressure', `${multiplier >= 1 ? '+' : ''}${((multiplier - 1) * 100).toFixed(2)}%`);
   setText('stockNetFlow', money(netFlow));
   setText('stockLiquidity', money(selected.liquidity || DEFAULT_LIQUIDITY));
-  setText('stockFormula', `${money(fundamental)} × ${multiplier.toFixed(3)} pressure = ${money(currentPrice)}`);
+  setText('stockFormula', `Followers + viewers + stream hours + growth = ${money(fundamental)}. Market demand multiplier ${multiplier.toFixed(3)} = ${money(currentPrice)}.`);
   setText('stockDayChange', `${selected.dayChange >= 0 ? '+' : ''}${selected.dayChange}% today`);
   const changeEl = $('stockDayChange');
   if (changeEl) changeEl.className = selected.dayChange >= 0 ? 'gain' : 'loss';
@@ -265,7 +291,7 @@ const candleRangeConfig = {
 
 function makeCandles(streamer, range = activeCandleRange) {
   const config = candleRangeConfig[range] || candleRangeConfig["1m"];
-  const rand = seededRandom(`${streamer.ticker}-${streamer.subscribers}-${streamer.dayChange}-${range}-${streamer.netFlow}`);
+  const rand = seededRandom(`${streamer.ticker}-${streamer.followers}-${streamer.avgViewers}-${streamer.dayChange}-${range}-${streamer.netFlow}`);
   const current = priceFor(streamer);
   const candles = [];
   const now = Math.floor(Date.now() / 1000);
@@ -625,7 +651,10 @@ if ($("tickerForm")) $("tickerForm").addEventListener("submit", (event) => {
   state.streamers.push({
     name: $("newName").value.trim(),
     ticker,
-    subscribers: Number($("newSubs").value || 0),
+    followers: Number($("newFollowers")?.value || $("newSubs")?.value || 0),
+    avgViewers: Number($("newAvgViewers")?.value || 1000),
+    streamHours: Number($("newStreamHours")?.value || 80),
+    recentGrowth: Number($("newGrowth")?.value || $("newChange")?.value || 0),
     dayChange: Number($("newChange").value || 0),
     netFlow: 0,
     liquidity: DEFAULT_LIQUIDITY

@@ -35,8 +35,8 @@
   </aside>
   <main>
     <section class="stock-hero">
-      <div><a class="back-link" href="index.html">← Back to market</a><p class="eyebrow">Streamer stock</p><h1 id="stockName">Streamer</h1><div class="stock-meta"><span class="ticker-badge" id="stockTicker">---</span><span id="stockSubs">0 subs</span><span id="stockDayChange">0%</span></div></div>
-      <div class="stock-price-card panel"><span>Current price</span><strong id="stockPrice">$0.00</strong><p class="muted">Subscriber value plus market pressure from fake buy/sell flow.</p></div>
+      <div><a class="back-link" href="index.html">← Back to market</a><p class="eyebrow">Streamer stock</p><h1 id="stockName">Streamer</h1><div class="stock-meta"><span class="ticker-badge" id="stockTicker">---</span><span id="stockSubs">0 followers</span><span id="stockDayChange">0%</span></div></div>
+      <div class="stock-price-card panel"><span>Current price</span><strong id="stockPrice">$0.00</strong><p class="muted">Followers + average viewers + stream hours + recent growth, then market demand from buy/sell flow.</p></div>
     </section>
 
     <section class="streamer-layout">
@@ -45,7 +45,7 @@
           <div>
             <p class="eyebrow">Price action</p>
             <h2>Candlestick chart</h2>
-            <p class="muted">OHLC demo candles built from subscriber fundamentals plus fake market pressure.</p>
+            <p class="muted">OHLC candles built from streamer fundamentals plus fake market demand.</p>
           </div>
         </div>
         <div class="chart-with-info">
@@ -61,12 +61,16 @@
             <p class="eyebrow">Live quote</p>
             <h3 id="stockPriceInline">Current price</h3>
             <div class="info-list compact-info">
-              <div><span>Fundamental value</span><strong id="stockFundamental">$0.00</strong></div>
-              <div><span>Market pressure</span><strong id="stockMarketPressure">0.00%</strong></div>
+              <div><span>Foundation value</span><strong id="stockFundamental">$0.00</strong></div>
+              <div><span>Followers</span><strong id="stockFollowers">0</strong></div>
+              <div><span>Avg viewers</span><strong id="stockAvgViewers">0</strong></div>
+              <div><span>Stream hours</span><strong id="stockStreamHours">0</strong></div>
+              <div><span>Recent growth</span><strong id="stockRecentGrowth">0%</strong></div>
+              <div><span>Market demand</span><strong id="stockMarketPressure">0.00%</strong></div>
               <div><span>Net money flow</span><strong id="stockNetFlow">$0.00</strong></div>
               <div><span>Liquidity pool</span><strong id="stockLiquidity">$0.00</strong></div>
             </div>
-            <p class="muted formula-note" id="stockFormula">Baseline × pressure = current price</p>
+            <p class="muted formula-note" id="stockFormula">Foundation × market demand = current price</p>
           </aside>
         </div>
       </article>

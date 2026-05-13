@@ -11,13 +11,20 @@ Fantasy stock-market prototype for Twitch streamers. Built as a static Vercel/Gi
 
 ## Pricing model
 
-Each streamer has a baseline/fundamental price from subscriber count:
+Each streamer now has a foundation price based on public-style streamer metrics:
 
-`subscriber count × $0.0005`
+`foundation = followers + average viewers + stream hours + recent growth`
+
+In code, those values are weighted inside `PRICE_WEIGHTS` in `app.js`:
+
+- `followers` = audience size foundation
+- `avgViewers` = live attention / demand
+- `streamHours` = consistency bonus
+- `recentGrowth` = momentum bonus or penalty
 
 The current market price then moves based on fake currency flowing into or out of that streamer:
 
-`current price = fundamental value × market pressure multiplier`
+`current price = foundation value × market demand multiplier`
 
 Buying shares increases the streamer's `netFlow`, which can push the price up. Selling shares decreases `netFlow`, which can push the price down. Each streamer also has a `liquidity` value so larger streamers are harder to move.
 
@@ -50,3 +57,9 @@ Upload these files to GitHub, then import the repo into Vercel. No build command
 - Top gainers/losers now display as balanced side-by-side panels.
 - Dark mode defaults on first load; toggle still saves user preference.
 - Current functionality retained: market, streamer detail pages, candlestick chart, buy/sell, portfolio, profile, leaderboard, local demo storage.
+
+
+## v10 pricing update
+- Rebuilt pricing around followers, average viewers, monthly stream hours, recent growth, and market demand.
+- Removed subscriber-count-based pricing language from the UI.
+- Streamer detail pages now show the new foundation metrics next to the candlestick chart.
