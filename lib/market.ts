@@ -36,7 +36,7 @@ export const defaultStreamers: Streamer[] = [
 ];
 
 export function money(num: number) {
-  return `$${Number(num || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+  return `$${Number(num || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 export function compact(num: number) { return Number(num || 0).toLocaleString(); }
 export function clamp(value: number, min: number, max: number) { return Math.min(max, Math.max(min, value)); }
