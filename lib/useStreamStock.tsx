@@ -2,8 +2,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { defaultStreamers, STARTING_CASH, priceFor, type Streamer, type Position, type Order } from "./market";
 
-type State = { streamers: Streamer[]; cash: number; positions: Record<string, Position>; orders: Order[]; username: string };
-const initial: State = { streamers: defaultStreamers, cash: STARTING_CASH, positions: {}, orders: [], username: "DemoTrader" };
+type State = {
+  streamers: Streamer[];
+  cash: number;
+  positions: Record<string, Position>;
+  orders: Order[];
+  username: string;
+  bio: string;
+  showNetWorth: boolean;
+};
+
+const initial: State = {
+  streamers: defaultStreamers,
+  cash: STARTING_CASH,
+  positions: {},
+  orders: [],
+  username: "DemoTrader",
+  bio: "Climbing the StreamStock leaderboard one streamer trade at a time.",
+  showNetWorth: true,
+};
 
 function read<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -21,14 +38,22 @@ export function useStreamStock() {
       cash: read("ss_cash", STARTING_CASH),
       positions: read("ss_positions", {}),
       orders: read("ss_orders", []),
-      username: read("ss_username", "DemoTrader")
+      username: read("ss_username", "DemoTrader"),
+      bio: read("ss_bio", "Climbing the StreamStock leaderboard one streamer trade at a time."),
+      showNetWorth: read("ss_show_net_worth", true),
     });
     setReady(true);
   }, []);
 
   useEffect(() => {
     if (!ready) return;
-    write("ss_streamers", state.streamers); write("ss_cash", state.cash); write("ss_positions", state.positions); write("ss_orders", state.orders); write("ss_username", state.username);
+    write("ss_streamers", state.streamers);
+    write("ss_cash", state.cash);
+    write("ss_positions", state.positions);
+    write("ss_orders", state.orders);
+    write("ss_username", state.username);
+    write("ss_bio", state.bio);
+    write("ss_show_net_worth", state.showNetWorth);
   }, [ready, state]);
 
   const portfolioValue = useMemo(() => Object.entries(state.positions).reduce((sum, [ticker, pos]) => {
@@ -68,6 +93,28 @@ export function useStreamStock() {
 
   function reset() { setState(initial); localStorage.clear(); }
   function setUsername(username: string) { setState(s => ({ ...s, username })); }
+  function setBio(bio: string) { setState(s => ({ ...s, bio })); }
+  function setShowNetWorth(showNetWorth: boolean) { setState(s => ({ ...s, showNetWorth })); }
+  function updateProfile(profile: { username?: string; bio?: string; showNetWorth?: boolean }) {
+    setState(s => ({
+      ...s,
+      username: profile.username ?? s.username,
+      bio: profile.bio ?? s.bio,
+      showNetWorth: profile.showNetWorth ?? s.showNetWorth,
+    }));
+  }
 
-  return { state, ready, portfolioValue, accountValue: state.cash + portfolioValue, totalReturn: portfolioValue - costBasis, placeOrder, reset, setUsername };
+  return {
+    state,
+    ready,
+    portfolioValue,
+    accountValue: state.cash + portfolioValue,
+    totalReturn: portfolioValue - costBasis,
+    placeOrder,
+    reset,
+    setUsername,
+    setBio,
+    setShowNetWorth,
+    updateProfile,
+  };
 }
