@@ -778,3 +778,121 @@ input::placeholder { color: var(--muted); }
   .activity-row { grid-template-columns: 1fr; }
   .activity-row > div:last-child { text-align: left; }
 }
+
+/* v15 polish: clean leaderboard card + clickable range pills */
+.leaderboard-card-clean {
+  min-width: 0;
+  overflow: hidden;
+}
+.leaderboard-card-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+.leaderboard-card-top > div { min-width: 0; }
+.leaderboard-card-top h2 {
+  margin: 2px 0 4px;
+  font-size: clamp(1.35rem, 1.9vw, 1.85rem);
+  letter-spacing: -.04em;
+  line-height: 1.05;
+}
+.top100-pill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 9px 13px;
+  border-radius: 999px;
+  font-weight: 950;
+  font-size: .82rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--broker));
+  box-shadow: 0 10px 22px rgba(145,70,255,.22);
+  white-space: nowrap;
+}
+.clean-rank-list {
+  gap: 9px;
+  min-width: 0;
+}
+.clean-rank-list .leader-mini-row {
+  grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-areas:
+    "rank name"
+    "rank value";
+  align-items: center;
+  gap: 2px 10px;
+  padding: 12px 13px;
+}
+.clean-rank-list .leader-mini-row span { grid-area: rank; }
+.clean-rank-list .leader-mini-row strong {
+  grid-area: name;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.clean-rank-list .leader-mini-row b {
+  grid-area: value;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .92rem;
+  color: var(--text);
+}
+.clean-rank-list .leader-mini-row.you b { color: var(--broker); }
+.score-money,
+.money-chip strong,
+.portfolio-money-strip strong,
+.mini-account-card strong {
+  overflow-wrap: anywhere;
+}
+.range-pills button {
+  cursor: pointer;
+  transition: transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.range-pills button:hover {
+  transform: translateY(-1px);
+  color: var(--text);
+  background: var(--bg-soft);
+}
+.range-pills button.active:hover {
+  color: #fff;
+  background: var(--fid-green);
+  box-shadow: 0 8px 18px rgba(47,143,58,.18);
+}
+.range-pills button:focus-visible,
+.clean-tabs button:focus-visible,
+.top100-pill:focus-visible {
+  outline: 3px solid var(--broker);
+  outline-offset: 3px;
+}
+@media (max-width: 1280px) {
+  .leaderboard-card-top {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .clean-rank-list .leader-mini-row {
+    grid-template-columns: 46px minmax(0, 1fr) auto;
+    grid-template-areas: "rank name value";
+    gap: 10px;
+  }
+  .clean-rank-list .leader-mini-row b { text-align: right; }
+}
+@media (max-width: 640px) {
+  .leaderboard-card-top {
+    grid-template-columns: 1fr;
+  }
+  .top100-pill { width: 100%; }
+  .clean-rank-list .leader-mini-row {
+    grid-template-columns: 42px minmax(0, 1fr);
+    grid-template-areas:
+      "rank name"
+      "rank value";
+  }
+  .clean-rank-list .leader-mini-row b { text-align: left; }
+}

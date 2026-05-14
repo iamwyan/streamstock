@@ -47,9 +47,16 @@ export default function HomePage() {
         <div className="panel-head"><div><p className="eyebrow">Risk board</p><h2>Top losers</h2></div><span className="loss">Today</span></div>
         <div className="list-stack">{losers.map(s=><Row key={s.ticker} s={s}/>)}</div>
       </article>
-      <article className="panel leaderboard-mini">
-        <div className="panel-head"><div><p className="eyebrow">Race to richest</p><h2>Leaderboard</h2></div><Link className="row-btn small" href="/leaderboard">Top 100</Link></div>
-        <div className="leader-mini-list">{leaderboard.map((u,i)=><div className={u.name===app.state.username?"leader-mini-row you":"leader-mini-row"} key={u.name}><span>#{i+1}</span><strong>{u.name}</strong><b>{money(u.value)}</b></div>)}</div>
+      <article className="panel leaderboard-mini leaderboard-card-clean">
+        <div className="leaderboard-card-top">
+          <div>
+            <p className="eyebrow">Race to richest</p>
+            <h2>Leaderboard</h2>
+            <p className="muted">Top net-worth players this season.</p>
+          </div>
+          <Link className="top100-pill" href="/leaderboard">View Top 100</Link>
+        </div>
+        <div className="leader-mini-list clean-rank-list">{leaderboard.map((u,i)=><div className={u.name===app.state.username?"leader-mini-row you":"leader-mini-row"} key={u.name}><span>#{i+1}</span><strong title={u.name}>{u.name}</strong><b>{money(u.value)}</b></div>)}</div>
       </article>
     </section>
 

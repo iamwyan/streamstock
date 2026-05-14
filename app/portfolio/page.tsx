@@ -9,6 +9,7 @@ type Tab = "summary" | "positions" | "activity";
 export default function PortfolioPage(){
   const app = useStreamStock();
   const [tab, setTab] = useState<Tab>("summary");
+  const [range, setRange] = useState("1Y");
   const entries = Object.entries(app.state.positions);
   const accountValue = app.accountValue;
   const cash = app.state.cash;
@@ -62,7 +63,7 @@ export default function PortfolioPage(){
           <h3>{money(accountValue)}</h3>
           <p><span className={app.totalReturn>=0?"gain":"loss"}>{app.totalReturn>=0?"+":""}{money(app.totalReturn)} ({returnPct>=0?"+":""}{returnPct.toFixed(2)}%)</span> <span className="muted">total gain/loss</span></p>
           <div className="mini-performance-chart" aria-hidden="true"><svg viewBox="0 0 520 180" preserveAspectRatio="none"><path className="grid-line" d="M0 45H520M0 95H520M0 145H520"/><path className="chart-line" d="M0 135 C35 125, 55 150, 80 132 S125 118, 145 122 S175 38, 205 52 S260 62, 290 50 S340 70, 370 60 S420 100, 450 88 S485 45, 520 30"/></svg><div className="chart-axis"><span>30 days ago</span><span>{compact(Math.round(accountValue))}</span><span>Today</span></div></div>
-          <div className="range-pills"><button type="button">1M</button><button type="button">YTD</button><button type="button" className="active">1Y</button><button type="button">3Y</button></div>
+          <div className="range-pills">{["1M","YTD","1Y","3Y"].map(r => <button key={r} type="button" className={range === r ? "active" : ""} onClick={() => setRange(r)}>{r}</button>)}</div>
           <button type="button" className="text-button" onClick={()=>setTab("positions")}>View all positions</button>
         </article>
 
