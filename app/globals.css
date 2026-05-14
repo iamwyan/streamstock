@@ -469,3 +469,156 @@ input::placeholder { color: var(--muted); }
   .movers-header span:nth-child(3), .mover-row > span:last-child { display:none; }
   .account-tabs a { padding: 14px 13px 11px; }
 }
+
+/* v13 game-first spacing + always-visible money */
+.site-header {
+  grid-template-columns: auto minmax(220px, 380px) minmax(260px, 1fr) auto auto;
+  gap: 14px;
+}
+.money-dock {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+.money-chip {
+  min-width: 118px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  gap: 2px;
+}
+.money-chip span {
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.money-chip strong {
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.money-chip.primary-money {
+  border-color: color-mix(in srgb, var(--broker) 44%, var(--line));
+  background: linear-gradient(135deg, var(--broker-soft), var(--purple-soft));
+}
+.game-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, .7fr);
+  gap: 22px;
+  margin: 18px 0 22px;
+  align-items: stretch;
+}
+.game-copy {
+  min-height: 270px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.game-score-card {
+  padding: 24px;
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  background:
+    radial-gradient(circle at 85% 10%, var(--purple-soft), transparent 12rem),
+    linear-gradient(145deg, var(--card), var(--card-2));
+}
+.score-label {
+  color: var(--muted);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: .76rem;
+}
+.score-money {
+  font-size: clamp(2.4rem, 4vw, 4.4rem);
+  letter-spacing: -.08em;
+  line-height: .95;
+}
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+}
+.score-grid div {
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  background: var(--bg-soft);
+  border-radius: 16px;
+  min-width: 0;
+}
+.score-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 850;
+  margin-bottom: 5px;
+}
+.score-grid b { font-size: 1.05rem; word-break: break-word; }
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(300px,.72fr);
+  gap: 22px;
+  align-items: start;
+}
+.board-card, .leaderboard-mini, .market-board { padding: 22px; }
+.roomy-head { margin-bottom: 18px; }
+.roomy-row { padding: 16px; }
+.ticker-name {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ticker-name > div { min-width: 0; }
+.ticker-name p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.price-stack { text-align: right; min-width: 92px; }
+.leader-mini-list { display: grid; gap: 10px; margin-top: 14px; }
+.leader-mini-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 13px 14px;
+  border-radius: 14px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line-soft);
+}
+.leader-mini-row span { color: var(--muted); font-weight: 900; }
+.leader-mini-row strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leader-mini-row b { white-space: nowrap; }
+.leader-mini-row.you {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: linear-gradient(90deg, var(--purple-soft), var(--bg-soft));
+}
+.market-board .search { max-width: 360px; }
+@media (max-width: 1280px) {
+  .site-header { grid-template-columns: auto minmax(220px, 1fr) auto auto; }
+  .desktop-nav { order: 3; grid-column: 1 / -1; justify-content: flex-start; }
+  .money-dock { justify-content: flex-end; }
+  .dashboard-grid { grid-template-columns: 1fr 1fr; }
+  .leaderboard-mini { grid-column: 1 / -1; }
+}
+@media (max-width: 920px) {
+  .game-hero, .dashboard-grid { grid-template-columns: 1fr; }
+  .money-dock { order: 2; width: 100%; justify-content: stretch; }
+  .money-chip { flex: 1; min-width: 0; }
+  .header-actions { order: 1; }
+  .desktop-nav { order: 4; }
+}
+@media (max-width: 760px) {
+  .site-header { position: sticky; top: 0; }
+  .money-chip span { font-size: .62rem; }
+  .money-chip strong { font-size: .92rem; }
+  .score-grid { grid-template-columns: 1fr 1fr; }
+  .price-stack { text-align: left; }
+  .market-board .search { max-width: 100%; }
+}
