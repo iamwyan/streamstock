@@ -622,3 +622,159 @@ input::placeholder { color: var(--muted); }
   .price-stack { text-align: left; }
   .market-board .search { max-width: 100%; }
 }
+
+/* v14 portfolio overhaul */
+.portfolio-rework {
+  display: grid;
+  gap: 20px;
+  margin-top: 14px;
+}
+.portfolio-topbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, .95fr);
+  gap: 22px;
+  align-items: center;
+  padding: 26px;
+}
+.portfolio-topbar h1 { margin: 0 0 6px; }
+.portfolio-money-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+}
+.portfolio-money-strip > div,
+.mini-account-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line-soft);
+  background: var(--bg-soft);
+  border-radius: 16px;
+}
+.portfolio-money-strip span,
+.mini-account-card span,
+.mover-change span,
+.mover-price span,
+.activity-row span {
+  display: block;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 850;
+  margin-bottom: 5px;
+}
+.portfolio-money-strip strong,
+.mini-account-card strong { font-size: 1.25rem; white-space: nowrap; }
+.clean-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  margin: 0;
+}
+.clean-tabs button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 14px 18px;
+  font-weight: 950;
+  border-bottom: 4px solid transparent;
+  white-space: nowrap;
+}
+.clean-tabs button.active {
+  color: var(--text);
+  border-color: var(--broker);
+  background: color-mix(in srgb, var(--broker-soft) 55%, transparent);
+}
+.portfolio-summary-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, .9fr);
+  gap: 20px;
+  align-items: stretch;
+}
+.portfolio-card-grid,
+.activity-layout {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.activity-layout { grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr); align-items:start; }
+.stacked-heading { align-items: flex-start; }
+.stacked-heading > div { min-width: 0; }
+.clean-movers {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+.mover-row-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(92px, auto) minmax(118px, auto);
+  gap: 16px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  background: var(--bg-soft);
+  border-radius: 16px;
+}
+.mover-row-card:hover { border-color: color-mix(in srgb, var(--accent) 42%, var(--line)); }
+.mover-change,
+.mover-price { text-align: right; min-width: 0; }
+.mover-change strong,
+.mover-price strong { white-space: nowrap; font-size: .98rem; }
+.symbol-cell { min-width: 0; }
+.symbol-cell > div { min-width: 0; }
+.symbol-cell strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.symbol-cell span:not(.avatar-dot) { max-width: 100%; }
+.text-button {
+  border: 0;
+  background: transparent;
+  color: #183c8c;
+  text-decoration: underline;
+  padding: 0;
+  font-weight: 850;
+}
+.reworked-positions { margin-top: 0; }
+.reworked-positions .positions-toolbar {
+  align-items: center;
+}
+.reworked-positions .positions-toolbar h2 { margin: 0 0 4px; }
+.cleaner-table { min-width: 980px; }
+.cleaner-table th,
+.cleaner-table td { padding: 14px 16px; }
+.table-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.table-name div { min-width: 0; }
+.table-name span:not(.avatar-dot) { display:block; color:var(--muted); font-size:.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 220px; }
+.activity-card { padding: 24px; }
+.activity-list { display: grid; gap: 12px; margin-top: 16px; }
+.activity-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid var(--line-soft);
+  background: var(--bg-soft);
+  border-radius: 16px;
+}
+.activity-row > div { min-width: 0; }
+.activity-row > div:last-child { text-align: right; }
+.warning { color: var(--warning) !important; }
+@media (max-width: 1180px) {
+  .portfolio-topbar,
+  .portfolio-summary-layout,
+  .activity-layout { grid-template-columns: 1fr; }
+  .portfolio-card-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 760px) {
+  .portfolio-topbar { padding: 18px; }
+  .portfolio-money-strip,
+  .portfolio-card-grid { grid-template-columns: 1fr; }
+  .mover-row-card { grid-template-columns: 1fr; align-items: start; }
+  .mover-change,
+  .mover-price { text-align: left; }
+  .activity-row { grid-template-columns: 1fr; }
+  .activity-row > div:last-child { text-align: left; }
+}
