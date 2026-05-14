@@ -1158,18 +1158,28 @@ input::placeholder { color: var(--muted); }
   .v16-top100 { width: 100%; }
 }
 
-/* v17 homepage spacing + profile rehaul */
+/* v18 homepage account badge fix + profile rehaul */
+.account-snapshot-card {
+  align-content: start;
+}
 .snapshot-top {
-  align-items: center;
-  gap: 22px;
+  align-items: start;
+  gap: 18px;
+}
+.snapshot-top > div:first-child {
+  display: grid;
+  gap: 14px;
 }
 .snapshot-money {
-  margin-top: 6px;
-  line-height: 1.02;
+  margin-top: 0;
+  line-height: .92;
+  padding-top: 2px;
 }
 .rank-chip {
-  align-self: center;
-  transform: translateY(10px);
+  align-self: start;
+  justify-self: end;
+  transform: none;
+  margin-top: 0;
 }
 
 .profile-rework {
