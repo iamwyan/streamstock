@@ -1,148 +1,305 @@
 "use client";
-import { useEffect, useState, type FormEvent } from "react";
-import Link from "next/link";
-import { useStreamStock } from "@/lib/useStreamStock";
-import { money, priceFor } from "@/lib/market";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { money } from "@/lib/market";
 
 export default function ProfilePage() {
-  const app = useStreamStock();
-  const [name, setName] = useState(app.state.username);
-  const [bio, setBio] = useState(app.state.bio);
-  const [showNetWorth, setShowNetWorth] = useState(app.state.showNetWorth);
-  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
+  const [cashBalance, setCashBalance] = useState(0);
+  const [portfolioValue, setPortfolioValue] = useState(0);
+
+  const [portfolioVisible, setPortfolioVisible] = useState(true);
+  const [tradesVisible, setTradesVisible] = useState(true);
 
   useEffect(() => {
-    if (!app.ready) return;
-    setName(app.state.username);
-    setBio(app.state.bio);
-    setShowNetWorth(app.state.showNetWorth);
-  }, [app.ready, app.state.username, app.state.bio, app.state.showNetWorth]);
+    loadProfile();
+  }, []);
 
-  const topHolding = Object.entries(app.state.positions)
-    .map(([ticker, position]) => {
-      const streamer = app.state.streamers.find((s) => s.ticker === ticker);
-      return streamer ? { ticker, streamer, value: position.shares * priceFor(streamer), shares: position.shares } : null;
-    })
-    .filter(Boolean)
-    .sort((a: any, b: any) => b.value - a.value)[0] as any;
+  async function loadProfile() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-  function saveProfile(e: FormEvent) {
-    e.preventDefault();
-    app.updateProfile({ username: name.trim() || "DemoTrader", bio: bio.trim(), showNetWorth });
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 1800);
+    const user = session?.user;
+
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    const { data: holdings } = await supabase
+      .from("holdings")
+      .select(`
+        shares,
+        streamers (
+          current_price
+        )
+      `)
+      .eq("user_id", user.id);
+
+    const portfolio =
+      holdings?.reduce((sum: number, h: any) => {
+        return (
+          sum +
+          Number(h.shares || 0) *
+            Number(h.streamers?.current_price || 0)
+        );
+      }, 0) || 0;
+
+    if (profile) {
+      setUsername(profile.username || "");
+      setBio(profile.bio || "");
+      setCashBalance(Number(profile.cash_balance || 0));
+      setPortfolioVisible(profile.portfolio_visible ?? true);
+      setTradesVisible(profile.trades_visible ?? true);
+      setPortfolioValue(portfolio);
+    }
+
+    setLoading(false);
   }
 
+  async function saveProfile() {
+    setSaving(true);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const user = session?.user;
+
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        username,
+        bio,
+        portfolio_visible: portfolioVisible,
+        trades_visible: tradesVisible,
+      })
+      .eq("id", user.id);
+
+    setSaving(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Profile saved");
+  }
+
+  if (loading) {
+    return (
+      <main className="page-wrap">
+        <section className="panel">Loading profile...</section>
+      </main>
+    );
+  }
+
+  const netWorth = cashBalance + portfolioValue;
+
   return (
-    <section className="profile-rework">
-      <article className="panel profile-hero-card">
-        <div className="profile-identity-block">
-          <div className="profile-avatar-xl">{(app.state.username || "D").slice(0, 1).toUpperCase()}</div>
+    <main className="page-wrap">
+      <section
+        className="panel"
+        style={{
+          maxWidth: 1000,
+          margin: "0 auto",
+          padding: 32,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 24,
+            flexWrap: "wrap",
+            alignItems: "flex-start",
+          }}
+        >
           <div>
-            <p className="eyebrow">Player profile</p>
-            <h1>{app.state.username}</h1>
-            <p className="big-muted profile-bio-preview">{app.state.bio || "No bio yet. Add one so other traders know who they are up against."}</p>
+            <p className="eyebrow">Profile</p>
+            <h1 style={{ fontSize: 38, marginBottom: 8 }}>
+              Your trader identity
+            </h1>
+            <p className="muted">
+              Username, bio, and public privacy settings.
+            </p>
+          </div>
+
+          <div
+            className="panel"
+            style={{
+              minWidth: 260,
+              padding: 22,
+            }}
+          >
+            <div className="muted">Public Net Worth</div>
+            <div
+              style={{
+                fontSize: 32,
+                fontWeight: 800,
+                marginTop: 8,
+              }}
+            >
+              {money(netWorth)}
+            </div>
+            <p className="muted" style={{ marginTop: 8 }}>
+              Always visible for leaderboard fairness.
+            </p>
           </div>
         </div>
-        <div className="profile-public-stats">
+
+        <div
+          style={{
+            display: "grid",
+            gap: 22,
+            marginTop: 32,
+          }}
+        >
           <div>
-            <span>Public Net Worth</span>
-            <strong>{app.state.showNetWorth ? money(app.accountValue) : "Hidden"}</strong>
+            <label>Username</label>
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Your trader name"
+              style={{
+                width: "100%",
+                padding: 14,
+                marginTop: 8,
+                borderRadius: 12,
+              }}
+            />
           </div>
+
           <div>
-            <span>Rank</span>
-            <strong>#24</strong>
+            <label>Bio</label>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Tell other traders who you are..."
+              rows={5}
+              style={{
+                width: "100%",
+                padding: 14,
+                marginTop: 8,
+                borderRadius: 12,
+                resize: "vertical",
+              }}
+            />
           </div>
-          <div>
-            <span>Positions</span>
-            <strong>{Object.keys(app.state.positions).length}</strong>
+
+          <div
+            className="panel"
+            style={{
+              padding: 22,
+            }}
+          >
+            <h2 style={{ marginBottom: 10 }}>Public profile rules</h2>
+
+            <div
+              style={{
+                display: "grid",
+                gap: 14,
+                marginTop: 18,
+              }}
+            >
+              <PrivacyRow
+                title="Net worth"
+                description="Always public. This keeps the race-to-richest leaderboard fair."
+                locked
+                checked
+              />
+
+              <PrivacyRow
+                title="Portfolio visibility"
+                description="Allow other users to view your current streamer positions."
+                checked={portfolioVisible}
+                onChange={setPortfolioVisible}
+              />
+
+              <PrivacyRow
+                title="Trade history visibility"
+                description="Allow other users to view your recent buys and sells."
+                checked={tradesVisible}
+                onChange={setTradesVisible}
+              />
+            </div>
           </div>
+
+          <button
+            className="primary-btn"
+            onClick={saveProfile}
+            disabled={saving}
+            style={{
+              width: "fit-content",
+              padding: "14px 24px",
+            }}
+          >
+            {saving ? "Saving..." : "Save Profile"}
+          </button>
         </div>
-      </article>
+      </section>
+    </main>
+  );
+}
 
-      <div className="profile-page-grid">
-        <form className="panel profile-editor-card" onSubmit={saveProfile}>
-          <div className="panel-head stacked-heading">
-            <div>
-              <p className="eyebrow">Edit profile</p>
-              <h2>Public identity</h2>
-              <p className="muted">This is what other players will see when they view your trader profile.</p>
-            </div>
-          </div>
-
-          <label>
-            Username
-            <input className="search" value={name} maxLength={22} onChange={(e) => setName(e.target.value)} placeholder="Your trader name" />
-          </label>
-
-          <label>
-            Bio
-            <textarea className="profile-textarea" value={bio} maxLength={180} onChange={(e) => setBio(e.target.value)} placeholder="Tell people your trading style..." />
-          </label>
-          <div className="bio-counter">{bio.length}/180 characters</div>
-
-          <div className="privacy-setting-row">
-            <div>
-              <strong>Show net worth on profile</strong>
-              <p className="muted">Turn this off if you want your account value hidden from other users.</p>
-            </div>
-            <button type="button" className={showNetWorth ? "toggle-switch on" : "toggle-switch"} onClick={() => setShowNetWorth((v) => !v)} aria-pressed={showNetWorth}>
-              <span></span>
-            </button>
-          </div>
-
-          <div className="profile-actions-row">
-            <button className="primary-btn" type="submit">Save profile</button>
-            {saved && <span className="save-confirm">Saved</span>}
-          </div>
-        </form>
-
-        <aside className="panel public-preview-card">
-          <p className="eyebrow">Preview</p>
-          <div className="preview-card-inner">
-            <div className="profile-avatar-lg">{(name || "D").slice(0, 1).toUpperCase()}</div>
-            <h2>{name || "DemoTrader"}</h2>
-            <p>{bio || "No bio yet."}</p>
-            <div className="preview-networth-box">
-              <span>Net Worth</span>
-              <strong>{showNetWorth ? money(app.accountValue) : "Hidden by user"}</strong>
-            </div>
-          </div>
-        </aside>
-
-        <section className="panel profile-stats-card">
-          <div className="panel-head stacked-heading">
-            <div>
-              <p className="eyebrow">Account stats</p>
-              <h2>Trader snapshot</h2>
-            </div>
-          </div>
-          <div className="profile-stat-grid">
-            <div><span>Cash</span><strong>{money(app.state.cash)}</strong></div>
-            <div><span>Portfolio</span><strong>{money(app.portfolioValue)}</strong></div>
-            <div><span>Total Return</span><strong className={app.totalReturn >= 0 ? "gain" : "loss"}>{app.totalReturn >= 0 ? "+" : ""}{money(app.totalReturn)}</strong></div>
-            <div><span>Open Orders</span><strong>{app.state.orders.length}</strong></div>
-          </div>
-        </section>
-
-        <section className="panel profile-stats-card">
-          <div className="panel-head stacked-heading">
-            <div>
-              <p className="eyebrow">Trading identity</p>
-              <h2>Current style</h2>
-            </div>
-          </div>
-          <div className="profile-insight-list">
-            <div><span>Largest position</span><strong>{topHolding ? `${topHolding.streamer.name} (${topHolding.ticker})` : "No positions yet"}</strong></div>
-            <div><span>Favorite market</span><strong>{topHolding ? "Streamer momentum" : "Start trading to unlock"}</strong></div>
-            <div><span>Privacy</span><strong>{app.state.showNetWorth ? "Net worth visible" : "Net worth hidden"}</strong></div>
-          </div>
-          <div className="profile-secondary-actions">
-            <Link className="secondary-btn" href="/portfolio">View portfolio</Link>
-            <button className="ghost-btn" type="button" onClick={app.reset}>Reset local demo account</button>
-          </div>
-        </section>
+function PrivacyRow({
+  title,
+  description,
+  checked,
+  locked = false,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  locked?: boolean;
+  onChange?: (value: boolean) => void;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        gap: 20,
+        alignItems: "center",
+        padding: 18,
+        borderRadius: 16,
+        border: "1px solid var(--border)",
+      }}
+    >
+      <div>
+        <strong>{title}</strong>
+        <p className="muted" style={{ marginTop: 4 }}>
+          {description}
+        </p>
       </div>
-    </section>
+
+      {locked ? (
+        <span className="ticker-badge">Always public</span>
+      ) : (
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange?.(e.target.checked)}
+        />
+      )}
+    </div>
   );
 }

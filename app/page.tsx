@@ -1,23 +1,101 @@
 "use client";
+
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import { useStreamStock } from "@/lib/useStreamStock";
 import { compact, money, priceFor } from "@/lib/market";
 
 const rivalNames = ["ClipWhale", "PurpleBull", "ChatAlpha", "CandleGoblin", "HypeCycle", "DipBuyer"];
 
+type DbStreamer = {
+  id?: string;
+  ticker: string;
+  display_name: string;
+  twitch_login?: string | null;
+  followers?: number | null;
+  avg_viewers?: number | null;
+  stream_hours?: number | null;
+  recent_growth?: number | null;
+  market_demand?: number | null;
+  current_price?: number | null;
+};
+
+function mapStreamer(row: DbStreamer) {
+  return {
+    id: row.id,
+    ticker: row.ticker,
+    name: row.display_name,
+    twitchLogin: row.twitch_login || row.ticker.toLowerCase(),
+    followers: Number(row.followers || 0),
+    avgViewers: Number(row.avg_viewers || 0),
+    streamHours: Number(row.stream_hours || 0),
+    recentGrowth: Number(row.recent_growth || 0),
+    marketDemand: Number(row.market_demand || 0),
+    netFlow: Number(row.market_demand || 0) * 100,
+    dayChange: Number(row.recent_growth || 0),
+    currentPrice: Number(row.current_price || 1),
+  };
+}
+
+function streamerPrice(s: any) {
+  if (typeof s.currentPrice === "number" && s.currentPrice > 0) return s.currentPrice;
+  return priceFor(s);
+}
+
 export default function HomePage() {
   const app = useStreamStock();
   const [q, setQ] = useState("");
+  const [liveStreamers, setLiveStreamers] = useState<any[]>([]);
+  const [loadingMarket, setLoadingMarket] = useState(true);
 
-  const sorted = [...app.state.streamers];
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadStreamers() {
+      const { data, error } = await supabase
+        .from("streamers")
+        .select("id,ticker,display_name,twitch_login,followers,avg_viewers,stream_hours,recent_growth,market_demand,current_price")
+        .order("current_price", { ascending: false });
+
+      if (!mounted) return;
+
+      if (error) {
+        console.error("Error loading streamers:", error.message);
+        setLiveStreamers([]);
+      } else {
+        setLiveStreamers((data || []).map(mapStreamer));
+      }
+
+      setLoadingMarket(false);
+    }
+
+    loadStreamers();
+
+    const channel = supabase
+      .channel("public:streamers-home")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "streamers" },
+        () => loadStreamers()
+      )
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const streamers = liveStreamers.length ? liveStreamers : app.state.streamers;
+  const sorted = [...streamers];
   const gainers = [...sorted].sort((a, b) => b.dayChange - a.dayChange).slice(0, 4);
   const losers = [...sorted].sort((a, b) => a.dayChange - b.dayChange).slice(0, 4);
-  const trending = [...sorted].sort((a, b) => priceFor(b) - priceFor(a)).slice(0, 4);
-  const filtered = app.state.streamers.filter((s) => `${s.name} ${s.ticker}`.toLowerCase().includes(q.toLowerCase()));
-  const marketCap = app.state.streamers.reduce((sum, s) => sum + priceFor(s) * 1_000_000, 0);
-  const avgMove = app.state.streamers.reduce((sum, s) => sum + s.dayChange, 0) / Math.max(1, app.state.streamers.length);
-  const totalVolume = app.state.streamers.reduce((sum, s) => sum + Math.abs(s.netFlow) * 18 + s.avgViewers * 12, 0);
+  const trending = [...sorted].sort((a, b) => streamerPrice(b) - streamerPrice(a)).slice(0, 4);
+  const filtered = streamers.filter((s) => `${s.name} ${s.ticker}`.toLowerCase().includes(q.toLowerCase()));
+  const marketCap = streamers.reduce((sum, s) => sum + streamerPrice(s) * 1_000_000, 0);
+  const avgMove = streamers.reduce((sum, s) => sum + Number(s.dayChange || 0), 0) / Math.max(1, streamers.length);
+  const totalVolume = streamers.reduce((sum, s) => sum + Math.abs(Number(s.netFlow || 0)) * 18 + Number(s.avgViewers || 0) * 12, 0);
 
   const leaderboard = useMemo(
     () => [
@@ -42,8 +120,8 @@ export default function HomePage() {
         <em>{s.ticker} · {compact(s.avgViewers)} avg viewers</em>
       </span>
       <span className="home-price">
-        <strong>{money(priceFor(s))}</strong>
-        <em className={s.dayChange >= 0 ? "gain" : "loss"}>{s.dayChange >= 0 ? "+" : ""}{s.dayChange}%</em>
+        <strong>{money(streamerPrice(s))}</strong>
+        <em className={s.dayChange >= 0 ? "gain" : "loss"}>{s.dayChange >= 0 ? "+" : ""}{Number(s.dayChange || 0).toFixed(2)}%</em>
       </span>
     </Link>
   );
@@ -83,7 +161,7 @@ export default function HomePage() {
       <section className="home-metrics-grid">
         <article className="panel home-metric-card"><span>Total Stream Market</span><strong>{money(marketCap)}</strong><em className={avgMove >= 0 ? "gain" : "loss"}>{avgMove >= 0 ? "+" : ""}{avgMove.toFixed(2)}% avg today</em></article>
         <article className="panel home-metric-card"><span>24h Demand</span><strong>{money(totalVolume)}</strong><em>Fake currency flow</em></article>
-        <article className="panel home-metric-card"><span>Active Tickers</span><strong>{app.state.streamers.length}</strong><em>Streamer stocks listed</em></article>
+        <article className="panel home-metric-card"><span>Active Tickers</span><strong>{streamers.length}</strong><em>{loadingMarket ? "Loading Supabase market..." : "Streamer stocks listed"}</em></article>
       </section>
 
       <section className="home-main-grid">
@@ -137,8 +215,8 @@ export default function HomePage() {
             <Link href={`/streamer/${s.ticker}`} className="trend-card" key={s.ticker}>
               <span className="ticker-badge">{s.ticker}</span>
               <strong>{s.name}</strong>
-              <b>{money(priceFor(s))}</b>
-              <em className={s.dayChange >= 0 ? "gain" : "loss"}>{s.dayChange >= 0 ? "+" : ""}{s.dayChange}% today</em>
+              <b>{money(streamerPrice(s))}</b>
+              <em className={s.dayChange >= 0 ? "gain" : "loss"}>{s.dayChange >= 0 ? "+" : ""}{Number(s.dayChange || 0).toFixed(2)}% today</em>
             </Link>
           ))}
         </div>
@@ -163,8 +241,8 @@ export default function HomePage() {
                   <td><span className="ticker-badge">{s.ticker}</span></td>
                   <td>{compact(s.followers)}</td>
                   <td>{compact(s.avgViewers)}</td>
-                  <td>{money(priceFor(s))}</td>
-                  <td className={s.dayChange >= 0 ? "gain" : "loss"}>{s.dayChange >= 0 ? "+" : ""}{s.dayChange}%</td>
+                  <td>{money(streamerPrice(s))}</td>
+                  <td className={s.dayChange >= 0 ? "gain" : "loss"}>{s.dayChange >= 0 ? "+" : ""}{Number(s.dayChange || 0).toFixed(2)}%</td>
                   <td><Link className="row-btn" href={`/streamer/${s.ticker}`}>Trade</Link></td>
                 </tr>
               ))}
