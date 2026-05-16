@@ -43,7 +43,8 @@ export type Order = {
   orderType: "market" | "limit";
   shares: number;
   price: number;
-  total: number;
+  total?: number;
+  status?: "Open" | "Filled" | "Cancelled";
   createdAt: string;
 };
 
