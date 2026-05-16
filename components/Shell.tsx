@@ -188,6 +188,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <Link href="/portfolio">Portfolio</Link>
           <Link href="/leaderboard">Leaderboard</Link>
           <Link href="/profile">Profile</Link>
+          <Link href="/faq">FAQ</Link>
         </nav>
 
         <div className="money-dock" aria-label="Account money snapshot">
