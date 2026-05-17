@@ -15,41 +15,64 @@ export default function AddStreamerAdminPage() {
     setLoading(true);
     setMessage("");
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (!session) {
+      if (!session) {
+        setMessage("You need to be logged in.");
+        return;
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+
+      const res = await fetch("/api/admin/add-streamer", {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          ticker,
+          twitchLogin,
+          startingPrice: Number(startingPrice),
+        }),
+      });
+
+      clearTimeout(timeout);
+
+      const text = await res.text();
+
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error(text || "Server returned a non-JSON response.");
+      }
+
+      if (!res.ok) {
+        setMessage(data.error || "Failed to add streamer.");
+        return;
+      }
+
+      setMessage(`Added ${data.streamer?.display_name || twitchLogin} as ${ticker.toUpperCase()}`);
+      setTicker("");
+      setTwitchLogin("");
+      setStartingPrice("25");
+    } catch (err: any) {
+      console.error(err);
+
+      if (err?.name === "AbortError") {
+        setMessage("Request timed out. Check Vercel logs or the admin API route.");
+      } else {
+        setMessage(err?.message || "Request failed. Check Vercel logs.");
+      }
+    } finally {
       setLoading(false);
-      setMessage("You need to be logged in.");
-      return;
     }
-
-    const res = await fetch("/api/admin/add-streamer", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
-        ticker,
-        twitchLogin,
-        startingPrice: Number(startingPrice),
-      }),
-    });
-
-    const data = await res.json();
-    setLoading(false);
-
-    if (!res.ok) {
-      setMessage(data.error || "Failed to add streamer.");
-      return;
-    }
-
-    setMessage(`Added ${data.streamer?.display_name || twitchLogin} as ${ticker.toUpperCase()}`);
-    setTicker("");
-    setTwitchLogin("");
-    setStartingPrice("25");
   }
 
   return (
