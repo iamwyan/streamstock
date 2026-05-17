@@ -1,349 +1,232 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { compact, money, priceFor } from "@/lib/market";
 
-type DbStreamer = {
-  id?: string;
-  ticker: string;
-  display_name: string;
-  twitch_login?: string | null;
-  followers?: number | null;
-  avg_viewers?: number | null;
-  stream_hours?: number | null;
-  recent_growth?: number | null;
-  market_demand?: number | null;
-  current_price?: number | null;
-};
+export default function ProfilePage() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-function mapStreamer(row: DbStreamer) {
-  return {
-    id: row.id,
-    ticker: row.ticker,
-    name: row.display_name,
-    twitchLogin: row.twitch_login || row.ticker.toLowerCase(),
-    followers: Number(row.followers || 0),
-    avgViewers: Number(row.avg_viewers || 0),
-    streamHours: Number(row.stream_hours || 0),
-    recentGrowth: Number(row.recent_growth || 0),
-    marketDemand: Number(row.market_demand || 0),
-    netFlow: Number(row.market_demand || 0) * 100,
-    dayChange: Number(row.recent_growth || 0),
-    currentPrice: Number(row.current_price || 0),
-  };
-}
-
-function streamerPrice(s: any) {
-  if (typeof s.currentPrice === "number" && s.currentPrice > 0) return s.currentPrice;
-  return priceFor(s);
-}
-
-function StreamerProfileCard({ s }: { s: any }) {
-  const isLive = Number(s.avgViewers || 0) > 0;
-
-  return (
-    <Link
-      href={`/streamer/${s.ticker}`}
-      className={isLive ? "panel streamer-profile-card is-live" : "panel streamer-profile-card"}
-    >
-      <div className="streamer-card-top">
-        <div className="streamer-card-name">
-          <div className="streamer-avatar">{s.ticker.slice(0, 1)}</div>
-          <div>
-            <h3>{s.name}</h3>
-            <p>{s.ticker}</p>
-          </div>
-        </div>
-
-        <span className={isLive ? "live-pill live" : "live-pill offline"}>
-          <span className="live-dot" />
-          {isLive ? "LIVE" : "OFFLINE"}
-        </span>
-      </div>
-
-      <div>
-        {isLive ? (
-          <p className="loss" style={{ margin: 0, fontWeight: 800 }}>
-            {compact(s.avgViewers)} viewers
-          </p>
-        ) : (
-          <p className="muted" style={{ margin: 0 }}>
-            Not currently live
-          </p>
-        )}
-      </div>
-
-      <div className="streamer-card-price">
-        <div>
-          <strong>{money(streamerPrice(s))}</strong>
-          <p className={s.dayChange >= 0 ? "gain" : "loss"} style={{ margin: "4px 0 0" }}>
-            {s.dayChange >= 0 ? "+" : ""}
-            {Number(s.dayChange || 0).toFixed(2)}% today
-          </p>
-        </div>
-      </div>
-
-      <div className="streamer-stat-row">
-        <div>
-          <span>Followers</span>
-          <b>{compact(s.followers)}</b>
-        </div>
-        <div>
-          <span>Demand</span>
-          <b>{Number(s.marketDemand || 0).toFixed(1)}</b>
-        </div>
-        <div>
-          <span>Hours</span>
-          <b>{Number(s.streamHours || 0)}</b>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-export default function HomePage() {
-  const [q, setQ] = useState("");
-  const [streamers, setStreamers] = useState<any[]>([]);
-  const [loadingMarket, setLoadingMarket] = useState(true);
+  const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
+  const [cashBalance, setCashBalance] = useState(0);
+  const [netWorthVisible, setNetWorthVisible] = useState(true);
 
   useEffect(() => {
-    let mounted = true;
+    async function loadProfile() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    async function loadStreamers() {
-      const { data, error } = await supabase
-        .from("streamers")
-        .select(
-          "id,ticker,display_name,twitch_login,followers,avg_viewers,stream_hours,recent_growth,market_demand,current_price"
-        )
-        .order("current_price", { ascending: false });
+      const user = session?.user;
 
-      if (!mounted) return;
-
-      if (error) {
-        console.error("Error loading streamers:", error.message);
-        setStreamers([]);
-      } else {
-        setStreamers((data || []).map(mapStreamer));
+      if (!user) {
+        window.location.href = "/login";
+        return;
       }
 
-      setLoadingMarket(false);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (!error && data) {
+        setUsername(data.username || "");
+        setBio(data.bio || "");
+        setCashBalance(Number(data.cash_balance || 0));
+        setNetWorthVisible(data.net_worth_visible ?? true);
+      }
+
+      setLoading(false);
     }
 
-    loadStreamers();
-
-    const channel = supabase
-      .channel("public:streamers-home")
-      .on("postgres_changes", { event: "*", schema: "public", table: "streamers" }, () =>
-        loadStreamers()
-      )
-      .subscribe();
-
-    return () => {
-      mounted = false;
-      supabase.removeChannel(channel);
-    };
+    loadProfile();
   }, []);
 
-  const gainers = [...streamers].sort((a, b) => b.dayChange - a.dayChange).slice(0, 4);
-  const losers = [...streamers].sort((a, b) => a.dayChange - b.dayChange).slice(0, 4);
-  const filtered = streamers.filter((s) =>
-    `${s.name} ${s.ticker}`.toLowerCase().includes(q.toLowerCase())
-  );
+  async function saveProfile() {
+    setSaving(true);
 
-  const marketCap = streamers.reduce((sum, s) => sum + streamerPrice(s) * 1_000_000, 0);
-  const avgMove =
-    streamers.reduce((sum, s) => sum + Number(s.dayChange || 0), 0) /
-    Math.max(1, streamers.length);
-  const totalVolume = streamers.reduce(
-    (sum, s) => sum + Math.abs(Number(s.netFlow || 0)) * 18 + Number(s.avgViewers || 0) * 12,
-    0
-  );
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-  const MiniMarketRow = ({ s, rank }: { s: any; rank: number }) => (
-    <Link className="home-mini-row" href={`/streamer/${s.ticker}`}>
-      <span className="home-rank">#{rank}</span>
-      <span className="avatar-dot">{s.ticker.slice(0, 1)}</span>
-      <span className="home-streamer-name">
-        <strong>{s.name}</strong>
-        <em>
-          {s.ticker} · {compact(s.avgViewers)} viewers
-        </em>
-      </span>
-      <span className="home-price">
-        <strong>{money(streamerPrice(s))}</strong>
-        <em className={s.dayChange >= 0 ? "gain" : "loss"}>
-          {s.dayChange >= 0 ? "+" : ""}
-          {Number(s.dayChange || 0).toFixed(2)}%
-        </em>
-      </span>
-    </Link>
-  );
+    const user = session?.user;
+
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        username,
+        bio,
+        net_worth_visible: netWorthVisible,
+      })
+      .eq("id", user.id);
+
+    setSaving(false);
+
+    if (!error) {
+      alert("Profile saved");
+    }
+  }
+
+  if (loading) {
+    return (
+      <main className="page-wrap">
+        <div className="card">Loading profile...</div>
+      </main>
+    );
+  }
 
   return (
-    <>
-      <section className="home-command-center">
-        <article className="panel home-hero-card" style={{ gridColumn: "1 / -1" }}>
-          <div className="pill">Season 01 · streamer investing game</div>
-          <h1>Invest in streamers. Race to the richest account.</h1>
-          <p className="big-muted">
-            StreamStock prices move from followers, average viewers, stream hours, recent growth,
-            and market demand. Buy the breakout, sell the falloff, climb the board.
-          </p>
-          <div className="hero-actions">
-            <Link className="primary-btn" href="#market">
-              Open Market
-            </Link>
-            <Link className="secondary-btn" href="/portfolio">
-              View Portfolio
-            </Link>
-          </div>
-        </article>
-      </section>
-
-      <section className="panel full" style={{ marginTop: 24 }}>
-        <div className="panel-head wrap roomy-head">
+    <main className="page-wrap">
+      <div
+        className="card"
+        style={{
+          maxWidth: 900,
+          margin: "0 auto",
+          padding: 32,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 24,
+            flexWrap: "wrap",
+          }}
+        >
           <div>
-            <p className="eyebrow">Streamer Watch</p>
-            <h2>Live streamer cards</h2>
-            <p className="muted">
-              Live streamers glow red and show current Twitch viewer count.
+            <h1
+              style={{
+                fontSize: 36,
+                marginBottom: 8,
+              }}
+            >
+              Profile
+            </h1>
+
+            <p style={{ opacity: 0.7 }}>
+              Customize your StreamStock account.
             </p>
           </div>
+
+          <div
+            className="card"
+            style={{
+              minWidth: 220,
+              padding: 20,
+            }}
+          >
+            <div style={{ opacity: 0.7 }}>
+              Net Worth
+            </div>
+
+            <div
+              style={{
+                fontSize: 30,
+                fontWeight: 700,
+                marginTop: 8,
+              }}
+            >
+              $
+              {cashBalance.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </div>
+          </div>
         </div>
 
-        <div className="streamer-card-grid">
-          {streamers.map((s) => (
-            <StreamerProfileCard key={s.ticker} s={s} />
-          ))}
-        </div>
-      </section>
-
-      <section className="home-metrics-grid">
-        <article className="panel home-metric-card">
-          <span>Total Stream Market</span>
-          <strong>{money(marketCap)}</strong>
-          <em className={avgMove >= 0 ? "gain" : "loss"}>
-            {avgMove >= 0 ? "+" : ""}
-            {avgMove.toFixed(2)}% avg today
-          </em>
-        </article>
-
-        <article className="panel home-metric-card">
-          <span>24h Demand</span>
-          <strong>{money(totalVolume)}</strong>
-          <em>Fake currency flow</em>
-        </article>
-
-        <article className="panel home-metric-card">
-          <span>Active Tickers</span>
-          <strong>{streamers.length}</strong>
-          <em>{loadingMarket ? "Loading Supabase market..." : "Streamer stocks listed"}</em>
-        </article>
-      </section>
-
-      <section className="home-main-grid">
-        <article className="panel home-board-card">
-          <div className="panel-head">
-            <div>
-              <p className="eyebrow">Market pulse</p>
-              <h2>Top gainers</h2>
-            </div>
-            <span className="gain">Today</span>
-          </div>
-          <div className="home-list">
-            {gainers.map((s, i) => (
-              <MiniMarketRow key={s.ticker} s={s} rank={i + 1} />
-            ))}
-          </div>
-        </article>
-
-        <article className="panel home-board-card">
-          <div className="panel-head">
-            <div>
-              <p className="eyebrow">Risk board</p>
-              <h2>Top losers</h2>
-            </div>
-            <span className="loss">Today</span>
-          </div>
-          <div className="home-list">
-            {losers.map((s, i) => (
-              <MiniMarketRow key={s.ticker} s={s} rank={i + 1} />
-            ))}
-          </div>
-        </article>
-      </section>
-
-      <section className="panel full market-board home-market-table" id="market">
-        <div className="panel-head wrap roomy-head">
-          <div>
-            <p className="eyebrow">Trade board</p>
-            <h2>Streamer Market</h2>
-            <p className="muted">Open a streamer to view candles, metrics, and place orders.</p>
-          </div>
+        <div style={{ marginTop: 32 }}>
+          <label>Username</label>
 
           <input
-            className="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            type="search"
-            placeholder="Search streamer or ticker..."
+            value={username}
+            onChange={(e) =>
+              setUsername(e.target.value)
+            }
+            style={{
+              width: "100%",
+              padding: 14,
+              marginTop: 8,
+              marginBottom: 20,
+              borderRadius: 12,
+            }}
           />
+
+          <label>Bio</label>
+
+          <textarea
+            value={bio}
+            onChange={(e) =>
+              setBio(e.target.value)
+            }
+            rows={5}
+            style={{
+              width: "100%",
+              padding: 14,
+              marginTop: 8,
+              borderRadius: 12,
+              resize: "vertical",
+            }}
+          />
+
+          <div
+            style={{
+              marginTop: 28,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: 20,
+              borderRadius: 16,
+              border: "1px solid var(--border)",
+            }}
+          >
+            <div>
+              <strong>
+                Show net worth publicly
+              </strong>
+
+              <div
+                style={{
+                  opacity: 0.7,
+                  marginTop: 4,
+                }}
+              >
+                Let other users view your
+                account value.
+              </div>
+            </div>
+
+            <input
+              type="checkbox"
+              checked={netWorthVisible}
+              onChange={(e) =>
+                setNetWorthVisible(
+                  e.target.checked
+                )
+              }
+            />
+          </div>
+
+          <button
+            onClick={saveProfile}
+            style={{
+              marginTop: 28,
+              padding: "14px 24px",
+              borderRadius: 14,
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            {saving
+              ? "Saving..."
+              : "Save Profile"}
+          </button>
         </div>
-
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Streamer</th>
-                <th>Ticker</th>
-                <th>Status</th>
-                <th>Followers</th>
-                <th>Viewers</th>
-                <th>Price</th>
-                <th>Day</th>
-                <th></th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filtered.map((s) => {
-                const isLive = Number(s.avgViewers || 0) > 0;
-
-                return (
-                  <tr key={s.ticker}>
-                    <td>
-                      <strong>{s.name}</strong>
-                    </td>
-                    <td>
-                      <span className="ticker-badge">{s.ticker}</span>
-                    </td>
-                    <td>
-                      <span className={isLive ? "live-pill live" : "live-pill offline"}>
-                        <span className="live-dot" />
-                        {isLive ? "LIVE" : "OFFLINE"}
-                      </span>
-                    </td>
-                    <td>{compact(s.followers)}</td>
-                    <td>{compact(s.avgViewers)}</td>
-                    <td>{money(streamerPrice(s))}</td>
-                    <td className={s.dayChange >= 0 ? "gain" : "loss"}>
-                      {s.dayChange >= 0 ? "+" : ""}
-                      {Number(s.dayChange || 0).toFixed(2)}%
-                    </td>
-                    <td>
-                      <Link className="row-btn" href={`/streamer/${s.ticker}`}>
-                        Trade
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </>
+      </div>
+    </main>
   );
 }

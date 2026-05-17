@@ -1521,3 +1521,212 @@ input::placeholder { color: var(--muted); }
 .streamer-stat-row b {
   font-size: 14px;
 }
+/* Streamer card polish — updated spacing + live-site copy support */
+.streamer-watch-section {
+  padding: 26px;
+  overflow: hidden;
+}
+
+.streamer-watch-section .panel-head {
+  margin-bottom: 6px;
+}
+
+.streamer-watch-section h2 {
+  font-size: clamp(1.6rem, 2.4vw, 2.25rem);
+}
+
+.streamer-watch-section .muted {
+  max-width: 720px;
+  font-size: 0.98rem;
+}
+
+.streamer-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.streamer-profile-card {
+  position: relative;
+  display: grid;
+  gap: 24px;
+  padding: 26px;
+  border-radius: 24px;
+  text-decoration: none;
+  overflow: hidden;
+  min-height: 360px;
+  transition:
+    transform .16s ease,
+    border-color .16s ease,
+    box-shadow .16s ease;
+}
+
+.streamer-profile-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.streamer-profile-card.is-live {
+  border-color: rgba(255, 60, 76, 0.85);
+  box-shadow:
+    0 0 0 1px rgba(255, 60, 76, 0.25),
+    0 0 34px rgba(255, 60, 76, 0.18);
+}
+
+.streamer-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.streamer-card-name {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.streamer-card-name > div:last-child {
+  min-width: 0;
+}
+
+.streamer-card-name h3 {
+  margin: 0;
+  font-size: 1.45rem;
+  letter-spacing: -.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.streamer-card-name p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: .92rem;
+  font-weight: 700;
+}
+
+.streamer-avatar {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--accent), #21e6c1);
+  color: white;
+  font-weight: 950;
+  font-size: 24px;
+}
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: fit-content;
+  max-width: 120px;
+  padding: 8px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.live-pill.live {
+  color: white;
+  background: rgba(255, 43, 60, 0.92);
+  box-shadow: 0 0 18px rgba(255, 43, 60, 0.65);
+  animation: livePulse 1.8s ease-in-out infinite;
+}
+
+.live-pill.offline {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  flex: 0 0 7px;
+}
+
+.live-viewer-count,
+.streamer-status-copy {
+  margin: 0;
+  font-weight: 850;
+}
+
+.streamer-card-price {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.streamer-card-price strong {
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: -.055em;
+}
+
+.streamer-card-price p {
+  margin: 8px 0 0;
+  font-weight: 850;
+}
+
+.streamer-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  align-self: end;
+}
+
+.streamer-stat-row div {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.045);
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+
+.streamer-stat-row span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 7px;
+}
+
+.streamer-stat-row b {
+  display: block;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes livePulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.04); opacity: 0.86; }
+}
+
+@media (max-width: 760px) {
+  .streamer-watch-section { padding: 18px; }
+  .streamer-card-grid { grid-template-columns: 1fr; gap: 16px; }
+  .streamer-profile-card { min-height: auto; padding: 20px; gap: 20px; }
+  .streamer-card-top { gap: 14px; }
+  .streamer-avatar { width: 54px; height: 54px; flex-basis: 54px; border-radius: 17px; }
+  .streamer-card-name h3 { font-size: 1.25rem; }
+  .streamer-stat-row { grid-template-columns: 1fr; }
+}
