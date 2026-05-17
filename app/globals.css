@@ -1521,178 +1521,434 @@ input::placeholder { color: var(--muted); }
 .streamer-stat-row b {
   font-size: 14px;
 }
-/* StreamStock homepage card cleanup — final overrides */
+/* v20 streamer image cards + horizontal featured rail */
+.streamer-watch-panel {
+  overflow: hidden;
+}
+
+.streamer-card-scroller {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(320px, 360px);
+  gap: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 6px 4px 18px;
+  margin-top: 20px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 60%, var(--line)) transparent;
+}
+
+.streamer-card-scroller::-webkit-scrollbar {
+  height: 10px;
+}
+
+.streamer-card-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.streamer-card-scroller::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-radius: 999px;
+}
+
+.streamer-card-scroller .streamer-profile-card {
+  scroll-snap-align: start;
+  min-height: 360px;
+  width: 100%;
+}
+
+.streamer-avatar-image-wrap {
+  overflow: hidden;
+  position: relative;
+}
+
+.streamer-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.streamer-avatar-image-wrap span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 760px) {
+  .streamer-card-scroller {
+    grid-auto-columns: minmax(280px, 86vw);
+    gap: 16px;
+  }
+}
+
+
+/* v21 compact featured streamer shelf */
+.streamer-watch-panel {
+  padding: 22px !important;
+  overflow: hidden;
+}
+
+.streamer-card-scroller {
+  display: flex !important;
+  gap: 14px !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 2px 16px;
+  margin-top: 18px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 55%, var(--line)) transparent;
+}
+
+.streamer-card-scroller::-webkit-scrollbar {
+  height: 9px;
+}
+
+.streamer-card-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.streamer-card-scroller::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-radius: 999px;
+}
+
+.streamer-card-scroller .streamer-profile-card {
+  flex: 0 0 242px !important;
+  width: 242px !important;
+  min-height: 258px !important;
+  padding: 16px !important;
+  gap: 13px !important;
+  border-radius: 19px !important;
+  scroll-snap-align: start;
+}
+
+.streamer-card-scroller .streamer-profile-card:hover {
+  transform: translateY(-2px);
+}
+
+.streamer-card-scroller .streamer-profile-card.is-live {
+  box-shadow:
+    0 0 0 1px rgba(255, 60, 76, 0.2),
+    0 0 20px rgba(255, 60, 76, 0.13) !important;
+}
+
+.streamer-card-scroller .streamer-card-top {
+  align-items: flex-start !important;
+  gap: 10px !important;
+}
+
+.streamer-card-scroller .streamer-card-name {
+  gap: 10px !important;
+  min-width: 0;
+}
+
+.streamer-card-scroller .streamer-card-name > div:last-child {
+  min-width: 0;
+}
+
+.streamer-card-scroller .streamer-card-name h3 {
+  font-size: 1.05rem !important;
+  line-height: 1.08 !important;
+  max-width: 112px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.streamer-card-scroller .streamer-card-name p {
+  font-size: .76rem !important;
+  margin-top: 3px !important;
+}
+
+.streamer-card-scroller .streamer-avatar {
+  width: 44px !important;
+  height: 44px !important;
+  flex: 0 0 44px !important;
+  border-radius: 14px !important;
+  font-size: 17px !important;
+  overflow: hidden;
+  position: relative;
+}
+
+.streamer-avatar-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.streamer-avatar-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.streamer-card-scroller .live-pill {
+  padding: 5px 8px !important;
+  font-size: 8.5px !important;
+  gap: 5px !important;
+  max-width: 72px;
+}
+
+.streamer-card-scroller .live-pill.live {
+  box-shadow: 0 0 10px rgba(255, 43, 60, 0.5) !important;
+}
+
+.streamer-card-scroller .live-dot {
+  width: 5px !important;
+  height: 5px !important;
+}
+
+.streamer-card-scroller .streamer-card-live-line,
+.streamer-card-scroller .streamer-profile-card > div:nth-child(2) {
+  min-height: 18px;
+  font-size: .82rem;
+}
+
+.streamer-card-scroller .live-viewers,
+.streamer-card-scroller .loss {
+  font-weight: 850;
+}
+
+.streamer-card-scroller .streamer-card-price strong {
+  font-size: 1.48rem !important;
+  letter-spacing: -.05em;
+}
+
+.streamer-card-scroller .streamer-card-price p {
+  font-size: .8rem !important;
+  margin-top: 4px !important;
+}
+
+.streamer-card-scroller .streamer-stat-row {
+  gap: 7px !important;
+}
+
+.streamer-card-scroller .streamer-stat-row div {
+  padding: 9px !important;
+  border-radius: 12px !important;
+}
+
+.streamer-card-scroller .streamer-stat-row span {
+  font-size: 8.5px !important;
+  margin-bottom: 4px !important;
+}
+
+.streamer-card-scroller .streamer-stat-row b {
+  font-size: 11.5px !important;
+}
+
+@media (max-width: 760px) {
+  .streamer-watch-panel {
+    padding: 17px !important;
+  }
+
+  .streamer-card-scroller .streamer-profile-card {
+    flex-basis: 225px !important;
+    width: 225px !important;
+    min-height: 250px !important;
+  }
+}
+
+/* v22 featured streamer shelf fixes: image avatars + no pill overflow */
 .home-command-center-single {
   grid-template-columns: 1fr !important;
 }
 
 .streamer-watch-panel {
-  padding: clamp(22px, 2.5vw, 30px);
-}
-
-.streamer-card-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
-  gap: 24px !important;
-  margin-top: 24px !important;
-}
-
-.streamer-profile-card {
-  position: relative;
-  display: grid;
-  gap: 24px !important;
-  padding: 26px !important;
-  border-radius: 24px !important;
-  text-decoration: none;
+  padding: 22px !important;
   overflow: hidden;
-  min-height: 360px;
-  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
 }
 
-.streamer-profile-card:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+.streamer-card-scroller {
+  display: flex !important;
+  gap: 14px !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 2px 16px;
+  margin-top: 18px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 55%, var(--line)) transparent;
 }
 
-.streamer-profile-card.is-live {
+.streamer-card-scroller::-webkit-scrollbar {
+  height: 9px;
+}
+
+.streamer-card-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.streamer-card-scroller::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-radius: 999px;
+}
+
+.streamer-card-scroller .streamer-profile-card {
+  flex: 0 0 242px !important;
+  width: 242px !important;
+  min-height: 258px !important;
+  padding: 16px !important;
+  gap: 13px !important;
+  border-radius: 19px !important;
+  scroll-snap-align: start;
+}
+
+.streamer-card-scroller .streamer-profile-card:hover {
+  transform: translateY(-2px);
+}
+
+.streamer-card-scroller .streamer-profile-card.is-live {
   border-color: rgba(255, 60, 76, 0.85) !important;
   box-shadow:
-    0 0 0 1px rgba(255, 60, 76, 0.25),
-    0 0 38px rgba(255, 60, 76, 0.20) !important;
+    0 0 0 1px rgba(255, 60, 76, 0.2),
+    0 0 20px rgba(255, 60, 76, 0.13) !important;
 }
 
-.streamer-card-top {
+.streamer-card-scroller .streamer-card-top {
   display: flex;
+  align-items: flex-start !important;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 18px !important;
-}
-
-.streamer-card-name {
-  display: flex;
-  align-items: center;
-  gap: 16px !important;
+  gap: 10px !important;
   min-width: 0;
 }
 
-.streamer-card-name h3 {
-  margin: 0;
-  font-size: 1.45rem !important;
-  letter-spacing: -.04em;
-  line-height: 1.05;
+.streamer-card-scroller .streamer-card-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 10px !important;
 }
 
-.streamer-card-name p {
-  margin: 4px 0 0 !important;
-  color: var(--muted);
-  font-size: .92rem;
-  font-weight: 700;
+.streamer-card-scroller .streamer-card-name > div:last-child {
+  min-width: 0;
 }
 
-.streamer-avatar {
-  width: 64px !important;
-  height: 64px !important;
-  flex: 0 0 64px;
+.streamer-card-scroller .streamer-card-name h3 {
+  font-size: 1.05rem !important;
+  line-height: 1.08 !important;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.streamer-card-scroller .streamer-card-name p {
+  font-size: .76rem !important;
+  margin-top: 3px !important;
+}
+
+.streamer-card-scroller .streamer-avatar {
+  width: 44px !important;
+  height: 44px !important;
+  flex: 0 0 44px !important;
+  border-radius: 14px !important;
+  font-size: 17px !important;
+  overflow: hidden;
+  position: relative;
+}
+
+.streamer-avatar-image-wrap {
+  overflow: hidden;
+  position: relative;
+}
+
+.streamer-avatar-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  z-index: 2;
+}
+
+.streamer-avatar-fallback {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  border-radius: 20px !important;
-  background: linear-gradient(135deg, var(--accent), #21e6c1);
-  color: white;
-  font-weight: 950;
-  font-size: 24px !important;
+  z-index: 1;
 }
 
-.streamer-card-live-line {
-  min-height: 28px;
-  display: flex;
-  align-items: center;
+.streamer-card-scroller .live-pill {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 5px 8px !important;
+  font-size: 8.5px !important;
+  gap: 5px !important;
+  max-width: 70px;
+  overflow: hidden;
 }
 
-.live-viewers {
+.streamer-card-scroller .live-pill.live {
+  box-shadow: 0 0 10px rgba(255, 43, 60, 0.5) !important;
+}
+
+.streamer-card-scroller .live-dot {
+  width: 5px !important;
+  height: 5px !important;
+}
+
+.streamer-card-scroller .streamer-card-live-line {
+  min-height: 18px;
+  font-size: .82rem;
+}
+
+.streamer-card-scroller .live-viewers {
   color: var(--loss);
-  font-weight: 900;
-}
-
-.streamer-card-price {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  gap: 16px;
-}
-
-.streamer-card-price strong {
-  font-size: 2rem !important;
-  letter-spacing: -.055em;
-}
-
-.streamer-card-price p {
-  margin: 6px 0 0 !important;
   font-weight: 850;
 }
 
-.streamer-stat-row {
-  display: grid;
+.streamer-card-scroller .streamer-card-price strong {
+  font-size: 1.48rem !important;
+  letter-spacing: -.05em;
+}
+
+.streamer-card-scroller .streamer-card-price p {
+  font-size: .8rem !important;
+  margin-top: 4px !important;
+}
+
+.streamer-card-scroller .streamer-stat-row {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px !important;
+  gap: 7px !important;
 }
 
-.streamer-stat-row div {
+.streamer-card-scroller .streamer-stat-row div {
   min-width: 0;
-  padding: 14px !important;
-  border-radius: 16px !important;
-  background: rgba(255,255,255,.045);
-  border: 1px solid var(--border);
+  padding: 9px !important;
+  border-radius: 12px !important;
 }
 
-.streamer-stat-row span {
+.streamer-card-scroller .streamer-stat-row span {
+  font-size: 8.5px !important;
+  margin-bottom: 4px !important;
+}
+
+.streamer-card-scroller .streamer-stat-row b {
   display: block;
-  color: var(--muted);
-  font-size: 11px !important;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  margin-bottom: 7px !important;
-}
-
-.streamer-stat-row b {
-  font-size: 15px !important;
-  overflow-wrap: anywhere;
-}
-
-.live-pill {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  width: fit-content;
-  padding: 8px 11px !important;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 950;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.live-pill.live {
-  color: #fff;
-  background: rgba(255, 43, 60, 0.95);
-  box-shadow: 0 0 20px rgba(255, 43, 60, 0.72);
-  animation: livePulse 1.8s ease-in-out infinite;
-}
-
-.live-pill.offline {
-  color: var(--muted);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--border);
+  font-size: 11.5px !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 760px) {
-  .streamer-card-grid {
-    grid-template-columns: 1fr !important;
+  .streamer-watch-panel {
+    padding: 17px !important;
   }
 
-  .streamer-profile-card {
-    min-height: auto;
-    padding: 20px !important;
+  .streamer-card-scroller .streamer-profile-card {
+    flex-basis: 225px !important;
+    width: 225px !important;
+    min-height: 250px !important;
   }
 }
