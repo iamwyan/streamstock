@@ -20,6 +20,7 @@ type DbStreamer = {
   market_demand?: number | string | null;
   current_price?: number | string | null;
   profile_image_url?: string | null;
+  liquidity?: number | string | null;
 };
 
 function mapStreamer(row: DbStreamer) {
@@ -37,6 +38,7 @@ function mapStreamer(row: DbStreamer) {
     dayChange: Number(row.recent_growth || 0),
     currentPrice: Number(row.current_price || 0),
     profileImageUrl: row.profile_image_url || null,
+    liquidity: Number(row.liquidity || 250000),
   };
 }
 
@@ -46,13 +48,16 @@ function streamerPrice(s: any) {
 }
 
 function streamerLiquidity(s: any) {
-  return Math.max(
-    5000,
-    Number(s.followers || 0) * 0.015 +
-      Number(s.avgViewers || 0) * 3 +
-      Number(s.streamHours || 0) * 15 +
-      Number(s.marketDemand || 0) * 250
-  );
+  return Math.max(120000, Number(s.liquidity || 250000));
+}
+
+function shortMoney(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(Number(value || 0));
 }
 
 function StreamerAvatar({ s }: { s: any }) {
@@ -131,7 +136,7 @@ function StreamerProfileCard({ s }: { s: any }) {
         </div>
         <div>
           <span>Liquidity</span>
-          <b>{money(streamerLiquidity(s))}</b>
+          <b title={money(streamerLiquidity(s))}>{shortMoney(streamerLiquidity(s))}</b>
         </div>
       </div>
     </Link>
@@ -150,7 +155,7 @@ export default function HomePage() {
     async function loadStreamers() {
       const { data, error } = await supabase
         .from("streamers")
-        .select("id,ticker,display_name,twitch_login,followers,avg_viewers,stream_hours,recent_growth,market_demand,current_price,profile_image_url")
+        .select("id,ticker,display_name,twitch_login,followers,avg_viewers,stream_hours,recent_growth,market_demand,current_price,profile_image_url,liquidity")
         .order("current_price", { ascending: false });
 
       if (!mounted) return;
