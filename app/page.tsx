@@ -13,12 +13,12 @@ type DbStreamer = {
   ticker: string;
   display_name: string;
   twitch_login?: string | null;
-  followers?: number | null;
-  avg_viewers?: number | null;
-  stream_hours?: number | null;
-  recent_growth?: number | null;
-  market_demand?: number | null;
-  current_price?: number | null;
+  followers?: number | string | null;
+  avg_viewers?: number | string | null;
+  stream_hours?: number | string | null;
+  recent_growth?: number | string | null;
+  market_demand?: number | string | null;
+  current_price?: number | string | null;
   profile_image_url?: string | null;
 };
 
@@ -35,7 +35,7 @@ function mapStreamer(row: DbStreamer) {
     marketDemand: Number(row.market_demand || 0),
     netFlow: Number(row.market_demand || 0) * 100,
     dayChange: Number(row.recent_growth || 0),
-    currentPrice: Number(row.current_price || 1),
+    currentPrice: Number(row.current_price || 0),
     profileImageUrl: row.profile_image_url || null,
   };
 }
@@ -45,10 +45,20 @@ function streamerPrice(s: any) {
   return priceFor(s);
 }
 
+function streamerLiquidity(s: any) {
+  return Math.max(
+    5000,
+    Number(s.followers || 0) * 0.015 +
+      Number(s.avgViewers || 0) * 3 +
+      Number(s.streamHours || 0) * 15 +
+      Number(s.marketDemand || 0) * 250
+  );
+}
+
 function StreamerAvatar({ s }: { s: any }) {
   return (
     <div className="streamer-avatar streamer-avatar-image-wrap">
-      <span className="streamer-avatar-fallback">{s.ticker.slice(0, 1)}</span>
+      <span className="streamer-avatar-fallback">{s.ticker?.slice(0, 1)}</span>
       {s.profileImageUrl && (
         <img
           className="streamer-avatar-img"
@@ -112,16 +122,16 @@ function StreamerProfileCard({ s }: { s: any }) {
 
       <div className="streamer-stat-row">
         <div>
-          <span>Followers</span>
-          <b>{compact(s.followers)}</b>
+          <span>Viewers</span>
+          <b>{compact(s.avgViewers)}</b>
         </div>
         <div>
           <span>Demand</span>
           <b>{Number(s.marketDemand || 0).toFixed(1)}</b>
         </div>
         <div>
-          <span>Hours</span>
-          <b>{Number(s.streamHours || 0)}</b>
+          <span>Liquidity</span>
+          <b>{money(streamerLiquidity(s))}</b>
         </div>
       </div>
     </Link>
@@ -131,7 +141,7 @@ function StreamerProfileCard({ s }: { s: any }) {
 export default function HomePage() {
   const app = useStreamStock();
   const [q, setQ] = useState("");
-  const [liveStreamers, setLiveStreamers] = useState<any[]>([]);
+  const [streamers, setStreamers] = useState<any[]>([]);
   const [loadingMarket, setLoadingMarket] = useState(true);
 
   useEffect(() => {
@@ -147,9 +157,9 @@ export default function HomePage() {
 
       if (error) {
         console.error("Error loading streamers:", error.message);
-        setLiveStreamers([]);
+        setStreamers([]);
       } else {
-        setLiveStreamers((data || []).map(mapStreamer));
+        setStreamers((data || []).map(mapStreamer));
       }
 
       setLoadingMarket(false);
@@ -159,10 +169,8 @@ export default function HomePage() {
 
     const channel = supabase
       .channel("public:streamers-home")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "streamers" },
-        () => loadStreamers()
+      .on("postgres_changes", { event: "*", schema: "public", table: "streamers" }, () =>
+        loadStreamers()
       )
       .subscribe();
 
@@ -172,7 +180,6 @@ export default function HomePage() {
     };
   }, []);
 
-  const streamers = liveStreamers.length ? liveStreamers : app.state.streamers;
   const sorted = [...streamers];
   const gainers = [...sorted].sort((a, b) => b.dayChange - a.dayChange).slice(0, 4);
   const losers = [...sorted].sort((a, b) => a.dayChange - b.dayChange).slice(0, 4);
@@ -180,24 +187,36 @@ export default function HomePage() {
   const featured = [...sorted]
     .sort((a, b) => {
       const liveDiff = Number(b.avgViewers > 0) - Number(a.avgViewers > 0);
-      if (liveDiff !== 0) return liveDiff;
-      return Number(b.avgViewers || 0) - Number(a.avgViewers || 0) || streamerPrice(b) - streamerPrice(a);
+      if (liveDiff) return liveDiff;
+      return Number(b.dayChange || 0) - Number(a.dayChange || 0);
     })
     .slice(0, 12);
-  const filtered = streamers.filter((s) => `${s.name} ${s.ticker}`.toLowerCase().includes(q.toLowerCase()));
-  const marketCap = streamers.reduce((sum, s) => sum + streamerPrice(s) * 1_000_000, 0);
-  const avgMove = streamers.reduce((sum, s) => sum + Number(s.dayChange || 0), 0) / Math.max(1, streamers.length);
-  const totalVolume = streamers.reduce((sum, s) => sum + Math.abs(Number(s.netFlow || 0)) * 18 + Number(s.avgViewers || 0) * 12, 0);
+
+  const filtered = streamers.filter((s) =>
+    `${s.name} ${s.ticker}`.toLowerCase().includes(q.toLowerCase())
+  );
+
+  const totalLiquidity = streamers.reduce((sum, s) => sum + streamerLiquidity(s), 0);
+  const avgMove =
+    streamers.reduce((sum, s) => sum + Number(s.dayChange || 0), 0) /
+    Math.max(1, streamers.length);
+  const totalVolume = streamers.reduce(
+    (sum, s) => sum + Math.abs(Number(s.netFlow || 0)) * 18 + Number(s.avgViewers || 0) * 12,
+    0
+  );
 
   const leaderboard = useMemo(
-    () => [
-      { name: app.state.username, value: app.accountValue, tag: "You" },
-      ...rivalNames.map((name, i) => ({
-        name,
-        value: 98000 - i * 9300 + Math.sin(i) * 2500,
-        tag: i === 0 ? "Leader" : "Rival",
-      })),
-    ].sort((a, b) => b.value - a.value).slice(0, 6),
+    () =>
+      [
+        { name: app.state.username || "You", value: app.accountValue || 0, tag: "You" },
+        ...rivalNames.map((name, i) => ({
+          name,
+          value: 98000 - i * 9300 + Math.sin(i) * 2500,
+          tag: i === 0 ? "Leader" : "Rival",
+        })),
+      ]
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 6),
     [app.state.username, app.accountValue]
   );
 
@@ -207,11 +226,16 @@ export default function HomePage() {
       <span className="avatar-dot">{s.ticker.slice(0, 1)}</span>
       <span className="home-streamer-name">
         <strong>{s.name}</strong>
-        <em>{s.ticker} · {compact(s.avgViewers)} avg viewers</em>
+        <em>
+          {s.ticker} · {compact(s.avgViewers)} viewers
+        </em>
       </span>
       <span className="home-price">
         <strong>{money(streamerPrice(s))}</strong>
-        <em className={s.dayChange >= 0 ? "gain" : "loss"}>{s.dayChange >= 0 ? "+" : ""}{Number(s.dayChange || 0).toFixed(2)}%</em>
+        <em className={s.dayChange >= 0 ? "gain" : "loss"}>
+          {s.dayChange >= 0 ? "+" : ""}
+          {Number(s.dayChange || 0).toFixed(2)}%
+        </em>
       </span>
     </Link>
   );
@@ -219,23 +243,45 @@ export default function HomePage() {
   return (
     <>
       <section className="home-command-center home-command-center-single">
-        <article className="panel home-hero-card">
+        <article className="panel home-hero-card" style={{ gridColumn: "1 / -1" }}>
           <div className="pill">Season 01 · streamer investing game</div>
           <h1>Invest in streamers. Race to the richest account.</h1>
           <p className="big-muted">
-            StreamStock prices move from followers, average viewers, stream hours, recent growth, and market demand. Buy the breakout, sell the falloff, climb the board.
+            StreamStock prices move from followers, average viewers, stream hours, recent growth,
+            and market demand. Buy the breakout, sell the falloff, climb the board.
           </p>
           <div className="hero-actions">
-            <Link className="primary-btn" href="#market">Open Market</Link>
-            <Link className="secondary-btn" href="/portfolio">View Portfolio</Link>
+            <Link className="primary-btn" href="#market">
+              Open Market
+            </Link>
+            <Link className="secondary-btn" href="/portfolio">
+              View Portfolio
+            </Link>
           </div>
         </article>
       </section>
 
       <section className="home-metrics-grid">
-        <article className="panel home-metric-card"><span>Total Stream Market</span><strong>{money(marketCap)}</strong><em className={avgMove >= 0 ? "gain" : "loss"}>{avgMove >= 0 ? "+" : ""}{avgMove.toFixed(2)}% avg today</em></article>
-        <article className="panel home-metric-card"><span>24h Demand</span><strong>{money(totalVolume)}</strong><em>Fake currency flow</em></article>
-        <article className="panel home-metric-card"><span>Active Tickers</span><strong>{streamers.length}</strong><em>{loadingMarket ? "Loading Supabase market..." : "Streamer stocks listed"}</em></article>
+        <article className="panel home-metric-card">
+          <span>Total Market Liquidity</span>
+          <strong>{money(totalLiquidity)}</strong>
+          <em className={avgMove >= 0 ? "gain" : "loss"}>
+            {avgMove >= 0 ? "+" : ""}
+            {avgMove.toFixed(2)}% avg today
+          </em>
+        </article>
+
+        <article className="panel home-metric-card">
+          <span>24h Demand</span>
+          <strong>{money(totalVolume)}</strong>
+          <em>Estimated fake-money flow</em>
+        </article>
+
+        <article className="panel home-metric-card">
+          <span>Active Tickers</span>
+          <strong>{streamers.length}</strong>
+          <em>{loadingMarket ? "Loading Supabase market..." : "Streamer stocks listed"}</em>
+        </article>
       </section>
 
       <section className="panel full streamer-watch-panel">
@@ -283,7 +329,7 @@ export default function HomePage() {
           </div>
           <div className="home-leader-list">
             {leaderboard.map((u, i) => (
-              <div className={u.name === app.state.username ? "home-leader-row you" : "home-leader-row"} key={u.name}>
+              <div className={u.name === (app.state.username || "You") ? "home-leader-row you" : "home-leader-row"} key={u.name}>
                 <span>#{i + 1}</span>
                 <strong title={u.name}>{u.name}</strong>
                 <b>{money(u.value)}</b>
@@ -324,19 +370,25 @@ export default function HomePage() {
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Streamer</th><th>Ticker</th><th>Followers</th><th>Avg Viewers</th><th>Price</th><th>Day</th><th></th></tr></thead>
+            <thead>
+              <tr><th>Streamer</th><th>Ticker</th><th>Status</th><th>Followers</th><th>Avg Viewers</th><th>Price</th><th>Day</th><th></th></tr>
+            </thead>
             <tbody>
-              {filtered.map((s) => (
-                <tr key={s.ticker}>
-                  <td><strong>{s.name}</strong></td>
-                  <td><span className="ticker-badge">{s.ticker}</span></td>
-                  <td>{compact(s.followers)}</td>
-                  <td>{compact(s.avgViewers)}</td>
-                  <td>{money(streamerPrice(s))}</td>
-                  <td className={s.dayChange >= 0 ? "gain" : "loss"}>{s.dayChange >= 0 ? "+" : ""}{Number(s.dayChange || 0).toFixed(2)}%</td>
-                  <td><Link className="row-btn" href={`/streamer/${s.ticker}`}>Trade</Link></td>
-                </tr>
-              ))}
+              {filtered.map((s) => {
+                const isLive = Number(s.avgViewers || 0) > 0;
+                return (
+                  <tr key={s.ticker}>
+                    <td><strong>{s.name}</strong></td>
+                    <td><span className="ticker-badge">{s.ticker}</span></td>
+                    <td><span className={isLive ? "live-pill live" : "live-pill offline"}><span className="live-dot" />{isLive ? "LIVE" : "OFFLINE"}</span></td>
+                    <td>{compact(s.followers)}</td>
+                    <td>{compact(s.avgViewers)}</td>
+                    <td>{money(streamerPrice(s))}</td>
+                    <td className={s.dayChange >= 0 ? "gain" : "loss"}>{s.dayChange >= 0 ? "+" : ""}{Number(s.dayChange || 0).toFixed(2)}%</td>
+                    <td><Link className="row-btn" href={`/streamer/${s.ticker}`}>Trade</Link></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

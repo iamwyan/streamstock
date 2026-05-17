@@ -22,25 +22,67 @@ async function getTwitchToken() {
   return res.json();
 }
 
+function calculateLiquidity(followers: number, viewers: number) {
+  let baseLiquidity = 120000;
+
+  if (followers >= 10000000) {
+    baseLiquidity = 5000000;
+  } else if (followers >= 5000000) {
+    baseLiquidity = 3000000;
+  } else if (followers >= 2000000) {
+    baseLiquidity = 1750000;
+  } else if (followers >= 1000000) {
+    baseLiquidity = 900000;
+  } else if (followers >= 500000) {
+    baseLiquidity = 450000;
+  } else if (followers >= 100000) {
+    baseLiquidity = 220000;
+  }
+
+  // Live viewers temporarily add liquidity so hot/live streamers
+  // are slightly harder to manipulate during hype.
+  const liveBoost = viewers * 12;
+
+  return Math.round(baseLiquidity + liveBoost);
+}
+
 export async function GET() {
   const tokenData = await getTwitchToken();
   const accessToken = tokenData.access_token;
 
   if (!accessToken) {
-    return NextResponse.json({ error: "No Twitch token", tokenData }, { status: 500 });
+    return NextResponse.json(
+      { error: "No Twitch token", tokenData },
+      { status: 500 }
+    );
   }
 
-  const { data: streamers } = await supabase
+  const { data: streamers, error: streamerError } = await supabase
     .from("streamers")
-    .select("id,ticker,twitch_login");
+    .select("id,ticker,twitch_login,followers,liquidity");
+
+  if (streamerError) {
+    return NextResponse.json(
+      { error: streamerError.message },
+      { status: 500 }
+    );
+  }
 
   if (!streamers?.length) {
-    return NextResponse.json({ message: "No streamers found" });
+    return NextResponse.json({
+      message: "No streamers found",
+    });
   }
 
   const logins = streamers
     .map((s) => s.twitch_login)
     .filter(Boolean);
+
+  if (!logins.length) {
+    return NextResponse.json({
+      message: "No Twitch logins found",
+    });
+  }
 
   const usersUrl =
     "https://api.twitch.tv/helix/users?" +
@@ -73,12 +115,14 @@ export async function GET() {
   const updates = [];
 
   for (const streamer of streamers) {
+    const twitchLogin = streamer.twitch_login?.toLowerCase();
+
     const twitchUser = twitchUsers.find(
-      (u: any) => u.login.toLowerCase() === streamer.twitch_login?.toLowerCase()
+      (u: any) => u.login.toLowerCase() === twitchLogin
     );
 
     const live = liveStreams.find(
-      (s: any) => s.user_login.toLowerCase() === streamer.twitch_login?.toLowerCase()
+      (s: any) => s.user_login.toLowerCase() === twitchLogin
     );
 
     if (!twitchUser) continue;
@@ -87,17 +131,23 @@ export async function GET() {
 
     const recentGrowth = live ? Math.min(15, avgViewers / 10000) : -0.25;
 
-    const marketDemand = live
-      ? Math.min(100, 50 + avgViewers / 1000)
-      : 35;
+    const marketDemand = live ? Math.min(100, 50 + avgViewers / 1000) : 35;
+
+    // Twitch Helix /users does NOT return follower count.
+    // Keep the follower value already stored in Supabase.
+    const followers = Number(streamer.followers || 0);
+
+    const liquidity = calculateLiquidity(followers, avgViewers);
 
     const { error } = await supabase
       .from("streamers")
       .update({
         display_name: twitchUser.display_name,
+        profile_image_url: twitchUser.profile_image_url,
         avg_viewers: avgViewers,
         recent_growth: recentGrowth,
         market_demand: marketDemand,
+        liquidity,
       })
       .eq("id", streamer.id);
 
@@ -106,6 +156,8 @@ export async function GET() {
       twitch_login: streamer.twitch_login,
       live: Boolean(live),
       viewers: avgViewers,
+      followers,
+      liquidity,
       error,
     });
   }
