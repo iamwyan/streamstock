@@ -109,6 +109,8 @@ export default function HomePage() {
     [app.state.username, app.accountValue]
   );
 
+  const yourRank = leaderboard.findIndex((u) => u.name === app.state.username) + 1 || 24;
+
   const MiniMarketRow = ({ s, rank }: { s: any; rank: number }) => (
     <Link className="home-mini-row" href={`/streamer/${s.ticker}`}>
       <span className="home-rank">#{rank}</span>
@@ -126,7 +128,7 @@ export default function HomePage() {
 
   return (
     <>
-      <section className="home-command-center" style={{ gridTemplateColumns: "1fr" }}>
+      <section className="home-command-center">
         <article className="panel home-hero-card">
           <div className="pill">Season 01 · streamer investing game</div>
           <h1>Invest in streamers. Race to the richest account.</h1>
@@ -139,7 +141,21 @@ export default function HomePage() {
           </div>
         </article>
 
-
+        <aside className="panel account-snapshot-card">
+          <div className="snapshot-top">
+            <div>
+              <p className="eyebrow">Your account</p>
+              <strong className="snapshot-money">{money(app.accountValue)}</strong>
+            </div>
+            <span className="rank-chip">Rank #{yourRank}</span>
+          </div>
+          <div className="snapshot-grid">
+            <div><span>Cash</span><b>{money(app.state.cash)}</b></div>
+            <div><span>Return</span><b className={app.totalReturn >= 0 ? "gain" : "loss"}>{app.totalReturn >= 0 ? "+" : ""}{money(app.totalReturn)}</b></div>
+            <div><span>Portfolio</span><b>{money(app.portfolioValue)}</b></div>
+            <div><span>Positions</span><b>{Object.keys(app.state.positions).length}</b></div>
+          </div>
+        </aside>
       </section>
 
       <section className="home-metrics-grid">

@@ -1391,3 +1391,133 @@ input::placeholder { color: var(--muted); }
   .privacy-setting-row { grid-template-columns: 1fr; }
   .toggle-switch { justify-self: start; }
 }
+.streamer-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  margin: 24px 0;
+}
+
+.streamer-profile-card {
+  position: relative;
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 22px;
+  text-decoration: none;
+  overflow: hidden;
+}
+
+.streamer-profile-card.is-live {
+  border-color: rgba(255, 60, 76, 0.85);
+  box-shadow:
+    0 0 0 1px rgba(255, 60, 76, 0.25),
+    0 0 34px rgba(255, 60, 76, 0.18);
+}
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.live-pill.live {
+  color: white;
+  background: rgba(255, 43, 60, 0.92);
+  box-shadow: 0 0 18px rgba(255, 43, 60, 0.65);
+  animation: livePulse 1.8s ease-in-out infinite;
+}
+
+.live-pill.offline {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+@keyframes livePulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.04); opacity: 0.86; }
+}
+
+.streamer-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.streamer-avatar {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--accent), #21e6c1);
+  color: white;
+  font-weight: 900;
+  font-size: 22px;
+}
+
+.streamer-card-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.streamer-card-name h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.streamer-card-name p {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+
+.streamer-card-price {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+}
+
+.streamer-card-price strong {
+  font-size: 28px;
+}
+
+.streamer-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.streamer-stat-row div {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--border);
+}
+
+.streamer-stat-row span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.streamer-stat-row b {
+  font-size: 14px;
+}
