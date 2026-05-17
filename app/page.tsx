@@ -143,6 +143,43 @@ function StreamerProfileCard({ s }: { s: any }) {
   );
 }
 
+function MarketTickerTape({ streamers }: { streamers: any[] }) {
+  const tickerItems = streamers
+    .filter((s) => s?.ticker)
+    .sort((a, b) => Math.abs(Number(b.dayChange || 0)) - Math.abs(Number(a.dayChange || 0)))
+    .slice(0, 40);
+
+  if (!tickerItems.length) return null;
+
+  const loopItems = [...tickerItems, ...tickerItems];
+
+  return (
+    <section className="market-ticker-tape" aria-label="Streamer ticker tape">
+      <div className="market-ticker-track">
+        {loopItems.map((s, index) => {
+          const move = Number(s.dayChange || 0);
+          const isUp = move >= 0;
+
+          return (
+            <Link
+              href={`/streamer/${s.ticker}`}
+              className="market-ticker-item"
+              key={`${s.ticker}-${index}`}
+              title={`${s.name} ${isUp ? "+" : ""}${move.toFixed(2)}%`}
+            >
+              <strong>{s.ticker}</strong>
+              <span>{money(streamerPrice(s))}</span>
+              <em className={isUp ? "gain" : "loss"}>
+                {isUp ? "+" : ""}{move.toFixed(2)}%
+              </em>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function HomePage() {
   const app = useStreamStock();
   const [q, setQ] = useState("");
@@ -247,6 +284,8 @@ export default function HomePage() {
 
   return (
     <>
+      <MarketTickerTape streamers={streamers} />
+
       <section className="home-command-center home-command-center-single">
         <article className="panel home-hero-card" style={{ gridColumn: "1 / -1" }}>
           <div className="pill">Season 01 · streamer investing game</div>
