@@ -1,12 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { useStreamStock } from "@/lib/useStreamStock";
 import { compact, money, priceFor } from "@/lib/market";
-
-const rivalNames = ["ClipWhale", "PurpleBull", "ChatAlpha", "CandleGoblin", "HypeCycle", "DipBuyer"];
 
 type DbStreamer = {
   id?: string;
@@ -34,7 +31,7 @@ function mapStreamer(row: DbStreamer) {
     marketDemand: Number(row.market_demand || 0),
     netFlow: Number(row.market_demand || 0) * 100,
     dayChange: Number(row.recent_growth || 0),
-    currentPrice: Number(row.current_price || 1),
+    currentPrice: Number(row.current_price || 0),
   };
 }
 
@@ -43,10 +40,72 @@ function streamerPrice(s: any) {
   return priceFor(s);
 }
 
+function StreamerProfileCard({ s }: { s: any }) {
+  const isLive = Number(s.avgViewers || 0) > 0;
+
+  return (
+    <Link
+      href={`/streamer/${s.ticker}`}
+      className={isLive ? "panel streamer-profile-card is-live" : "panel streamer-profile-card"}
+    >
+      <div className="streamer-card-top">
+        <div className="streamer-card-name">
+          <div className="streamer-avatar">{s.ticker.slice(0, 1)}</div>
+          <div>
+            <h3>{s.name}</h3>
+            <p>{s.ticker}</p>
+          </div>
+        </div>
+
+        <span className={isLive ? "live-pill live" : "live-pill offline"}>
+          <span className="live-dot" />
+          {isLive ? "LIVE" : "OFFLINE"}
+        </span>
+      </div>
+
+      <div>
+        {isLive ? (
+          <p className="loss" style={{ margin: 0, fontWeight: 800 }}>
+            {compact(s.avgViewers)} viewers
+          </p>
+        ) : (
+          <p className="muted" style={{ margin: 0 }}>
+            Not currently live
+          </p>
+        )}
+      </div>
+
+      <div className="streamer-card-price">
+        <div>
+          <strong>{money(streamerPrice(s))}</strong>
+          <p className={s.dayChange >= 0 ? "gain" : "loss"} style={{ margin: "4px 0 0" }}>
+            {s.dayChange >= 0 ? "+" : ""}
+            {Number(s.dayChange || 0).toFixed(2)}% today
+          </p>
+        </div>
+      </div>
+
+      <div className="streamer-stat-row">
+        <div>
+          <span>Followers</span>
+          <b>{compact(s.followers)}</b>
+        </div>
+        <div>
+          <span>Demand</span>
+          <b>{Number(s.marketDemand || 0).toFixed(1)}</b>
+        </div>
+        <div>
+          <span>Hours</span>
+          <b>{Number(s.streamHours || 0)}</b>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export default function HomePage() {
-  const app = useStreamStock();
   const [q, setQ] = useState("");
-  const [liveStreamers, setLiveStreamers] = useState<any[]>([]);
+  const [streamers, setStreamers] = useState<any[]>([]);
   const [loadingMarket, setLoadingMarket] = useState(true);
 
   useEffect(() => {
@@ -55,16 +114,18 @@ export default function HomePage() {
     async function loadStreamers() {
       const { data, error } = await supabase
         .from("streamers")
-        .select("id,ticker,display_name,twitch_login,followers,avg_viewers,stream_hours,recent_growth,market_demand,current_price")
+        .select(
+          "id,ticker,display_name,twitch_login,followers,avg_viewers,stream_hours,recent_growth,market_demand,current_price"
+        )
         .order("current_price", { ascending: false });
 
       if (!mounted) return;
 
       if (error) {
         console.error("Error loading streamers:", error.message);
-        setLiveStreamers([]);
+        setStreamers([]);
       } else {
-        setLiveStreamers((data || []).map(mapStreamer));
+        setStreamers((data || []).map(mapStreamer));
       }
 
       setLoadingMarket(false);
@@ -74,10 +135,8 @@ export default function HomePage() {
 
     const channel = supabase
       .channel("public:streamers-home")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "streamers" },
-        () => loadStreamers()
+      .on("postgres_changes", { event: "*", schema: "public", table: "streamers" }, () =>
+        loadStreamers()
       )
       .subscribe();
 
@@ -87,29 +146,20 @@ export default function HomePage() {
     };
   }, []);
 
-  const streamers = liveStreamers.length ? liveStreamers : app.state.streamers;
-  const sorted = [...streamers];
-  const gainers = [...sorted].sort((a, b) => b.dayChange - a.dayChange).slice(0, 4);
-  const losers = [...sorted].sort((a, b) => a.dayChange - b.dayChange).slice(0, 4);
-  const trending = [...sorted].sort((a, b) => streamerPrice(b) - streamerPrice(a)).slice(0, 4);
-  const filtered = streamers.filter((s) => `${s.name} ${s.ticker}`.toLowerCase().includes(q.toLowerCase()));
-  const marketCap = streamers.reduce((sum, s) => sum + streamerPrice(s) * 1_000_000, 0);
-  const avgMove = streamers.reduce((sum, s) => sum + Number(s.dayChange || 0), 0) / Math.max(1, streamers.length);
-  const totalVolume = streamers.reduce((sum, s) => sum + Math.abs(Number(s.netFlow || 0)) * 18 + Number(s.avgViewers || 0) * 12, 0);
-
-  const leaderboard = useMemo(
-    () => [
-      { name: app.state.username, value: app.accountValue, tag: "You" },
-      ...rivalNames.map((name, i) => ({
-        name,
-        value: 98000 - i * 9300 + Math.sin(i) * 2500,
-        tag: i === 0 ? "Leader" : "Rival",
-      })),
-    ].sort((a, b) => b.value - a.value).slice(0, 6),
-    [app.state.username, app.accountValue]
+  const gainers = [...streamers].sort((a, b) => b.dayChange - a.dayChange).slice(0, 4);
+  const losers = [...streamers].sort((a, b) => a.dayChange - b.dayChange).slice(0, 4);
+  const filtered = streamers.filter((s) =>
+    `${s.name} ${s.ticker}`.toLowerCase().includes(q.toLowerCase())
   );
 
-  const yourRank = leaderboard.findIndex((u) => u.name === app.state.username) + 1 || 24;
+  const marketCap = streamers.reduce((sum, s) => sum + streamerPrice(s) * 1_000_000, 0);
+  const avgMove =
+    streamers.reduce((sum, s) => sum + Number(s.dayChange || 0), 0) /
+    Math.max(1, streamers.length);
+  const totalVolume = streamers.reduce(
+    (sum, s) => sum + Math.abs(Number(s.netFlow || 0)) * 18 + Number(s.avgViewers || 0) * 12,
+    0
+  );
 
   const MiniMarketRow = ({ s, rank }: { s: any; rank: number }) => (
     <Link className="home-mini-row" href={`/streamer/${s.ticker}`}>
@@ -117,11 +167,16 @@ export default function HomePage() {
       <span className="avatar-dot">{s.ticker.slice(0, 1)}</span>
       <span className="home-streamer-name">
         <strong>{s.name}</strong>
-        <em>{s.ticker} · {compact(s.avgViewers)} avg viewers</em>
+        <em>
+          {s.ticker} · {compact(s.avgViewers)} viewers
+        </em>
       </span>
       <span className="home-price">
         <strong>{money(streamerPrice(s))}</strong>
-        <em className={s.dayChange >= 0 ? "gain" : "loss"}>{s.dayChange >= 0 ? "+" : ""}{Number(s.dayChange || 0).toFixed(2)}%</em>
+        <em className={s.dayChange >= 0 ? "gain" : "loss"}>
+          {s.dayChange >= 0 ? "+" : ""}
+          {Number(s.dayChange || 0).toFixed(2)}%
+        </em>
       </span>
     </Link>
   );
@@ -129,97 +184,95 @@ export default function HomePage() {
   return (
     <>
       <section className="home-command-center">
-        <article className="panel home-hero-card">
+        <article className="panel home-hero-card" style={{ gridColumn: "1 / -1" }}>
           <div className="pill">Season 01 · streamer investing game</div>
           <h1>Invest in streamers. Race to the richest account.</h1>
           <p className="big-muted">
-            StreamStock prices move from followers, average viewers, stream hours, recent growth, and market demand. Buy the breakout, sell the falloff, climb the board.
+            StreamStock prices move from followers, average viewers, stream hours, recent growth,
+            and market demand. Buy the breakout, sell the falloff, climb the board.
           </p>
           <div className="hero-actions">
-            <Link className="primary-btn" href="#market">Open Market</Link>
-            <Link className="secondary-btn" href="/portfolio">View Portfolio</Link>
+            <Link className="primary-btn" href="#market">
+              Open Market
+            </Link>
+            <Link className="secondary-btn" href="/portfolio">
+              View Portfolio
+            </Link>
           </div>
         </article>
+      </section>
 
-        <aside className="panel account-snapshot-card">
-          <div className="snapshot-top">
-            <div>
-              <p className="eyebrow">Your account</p>
-              <strong className="snapshot-money">{money(app.accountValue)}</strong>
-            </div>
-            <span className="rank-chip">Rank #{yourRank}</span>
+      <section className="panel full" style={{ marginTop: 24 }}>
+        <div className="panel-head wrap roomy-head">
+          <div>
+            <p className="eyebrow">Streamer Watch</p>
+            <h2>Live streamer cards</h2>
+            <p className="muted">
+              Live streamers glow red and show current Twitch viewer count.
+            </p>
           </div>
-          <div className="snapshot-grid">
-            <div><span>Cash</span><b>{money(app.state.cash)}</b></div>
-            <div><span>Return</span><b className={app.totalReturn >= 0 ? "gain" : "loss"}>{app.totalReturn >= 0 ? "+" : ""}{money(app.totalReturn)}</b></div>
-            <div><span>Portfolio</span><b>{money(app.portfolioValue)}</b></div>
-            <div><span>Positions</span><b>{Object.keys(app.state.positions).length}</b></div>
-          </div>
-        </aside>
+        </div>
+
+        <div className="streamer-card-grid">
+          {streamers.map((s) => (
+            <StreamerProfileCard key={s.ticker} s={s} />
+          ))}
+        </div>
       </section>
 
       <section className="home-metrics-grid">
-        <article className="panel home-metric-card"><span>Total Stream Market</span><strong>{money(marketCap)}</strong><em className={avgMove >= 0 ? "gain" : "loss"}>{avgMove >= 0 ? "+" : ""}{avgMove.toFixed(2)}% avg today</em></article>
-        <article className="panel home-metric-card"><span>24h Demand</span><strong>{money(totalVolume)}</strong><em>Fake currency flow</em></article>
-        <article className="panel home-metric-card"><span>Active Tickers</span><strong>{streamers.length}</strong><em>{loadingMarket ? "Loading Supabase market..." : "Streamer stocks listed"}</em></article>
+        <article className="panel home-metric-card">
+          <span>Total Stream Market</span>
+          <strong>{money(marketCap)}</strong>
+          <em className={avgMove >= 0 ? "gain" : "loss"}>
+            {avgMove >= 0 ? "+" : ""}
+            {avgMove.toFixed(2)}% avg today
+          </em>
+        </article>
+
+        <article className="panel home-metric-card">
+          <span>24h Demand</span>
+          <strong>{money(totalVolume)}</strong>
+          <em>Fake currency flow</em>
+        </article>
+
+        <article className="panel home-metric-card">
+          <span>Active Tickers</span>
+          <strong>{streamers.length}</strong>
+          <em>{loadingMarket ? "Loading Supabase market..." : "Streamer stocks listed"}</em>
+        </article>
       </section>
 
       <section className="home-main-grid">
         <article className="panel home-board-card">
           <div className="panel-head">
-            <div><p className="eyebrow">Market pulse</p><h2>Top gainers</h2></div>
+            <div>
+              <p className="eyebrow">Market pulse</p>
+              <h2>Top gainers</h2>
+            </div>
             <span className="gain">Today</span>
           </div>
-          <div className="home-list">{gainers.map((s, i) => <MiniMarketRow key={s.ticker} s={s} rank={i + 1} />)}</div>
+          <div className="home-list">
+            {gainers.map((s, i) => (
+              <MiniMarketRow key={s.ticker} s={s} rank={i + 1} />
+            ))}
+          </div>
         </article>
 
         <article className="panel home-board-card">
           <div className="panel-head">
-            <div><p className="eyebrow">Risk board</p><h2>Top losers</h2></div>
+            <div>
+              <p className="eyebrow">Risk board</p>
+              <h2>Top losers</h2>
+            </div>
             <span className="loss">Today</span>
           </div>
-          <div className="home-list">{losers.map((s, i) => <MiniMarketRow key={s.ticker} s={s} rank={i + 1} />)}</div>
-        </article>
-
-        <article className="panel home-leaderboard-card">
-          <div className="leaderboard-card-top v16-leader-top">
-            <div>
-              <p className="eyebrow">Race to richest</p>
-              <h2>Leaderboard</h2>
-              <p className="muted">Top fake-money traders this season.</p>
-            </div>
-            <Link className="top100-pill v16-top100" href="/leaderboard">Top 100</Link>
-          </div>
-          <div className="home-leader-list">
-            {leaderboard.map((u, i) => (
-              <div className={u.name === app.state.username ? "home-leader-row you" : "home-leader-row"} key={u.name}>
-                <span>#{i + 1}</span>
-                <strong title={u.name}>{u.name}</strong>
-                <b>{money(u.value)}</b>
-              </div>
+          <div className="home-list">
+            {losers.map((s, i) => (
+              <MiniMarketRow key={s.ticker} s={s} rank={i + 1} />
             ))}
           </div>
         </article>
-      </section>
-
-      <section className="panel home-wide-card">
-        <div className="panel-head wrap roomy-head">
-          <div>
-            <p className="eyebrow">Trending</p>
-            <h2>Most valuable streamer stocks</h2>
-          </div>
-          <Link className="secondary-btn small" href="#market">See all</Link>
-        </div>
-        <div className="trending-strip">
-          {trending.map((s) => (
-            <Link href={`/streamer/${s.ticker}`} className="trend-card" key={s.ticker}>
-              <span className="ticker-badge">{s.ticker}</span>
-              <strong>{s.name}</strong>
-              <b>{money(streamerPrice(s))}</b>
-              <em className={s.dayChange >= 0 ? "gain" : "loss"}>{s.dayChange >= 0 ? "+" : ""}{Number(s.dayChange || 0).toFixed(2)}% today</em>
-            </Link>
-          ))}
-        </div>
       </section>
 
       <section className="panel full market-board home-market-table" id="market">
@@ -229,23 +282,64 @@ export default function HomePage() {
             <h2>Streamer Market</h2>
             <p className="muted">Open a streamer to view candles, metrics, and place orders.</p>
           </div>
-          <input className="search" value={q} onChange={(e) => setQ(e.target.value)} type="search" placeholder="Search streamer or ticker..." />
+
+          <input
+            className="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            type="search"
+            placeholder="Search streamer or ticker..."
+          />
         </div>
+
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Streamer</th><th>Ticker</th><th>Followers</th><th>Avg Viewers</th><th>Price</th><th>Day</th><th></th></tr></thead>
+            <thead>
+              <tr>
+                <th>Streamer</th>
+                <th>Ticker</th>
+                <th>Status</th>
+                <th>Followers</th>
+                <th>Viewers</th>
+                <th>Price</th>
+                <th>Day</th>
+                <th></th>
+              </tr>
+            </thead>
+
             <tbody>
-              {filtered.map((s) => (
-                <tr key={s.ticker}>
-                  <td><strong>{s.name}</strong></td>
-                  <td><span className="ticker-badge">{s.ticker}</span></td>
-                  <td>{compact(s.followers)}</td>
-                  <td>{compact(s.avgViewers)}</td>
-                  <td>{money(streamerPrice(s))}</td>
-                  <td className={s.dayChange >= 0 ? "gain" : "loss"}>{s.dayChange >= 0 ? "+" : ""}{Number(s.dayChange || 0).toFixed(2)}%</td>
-                  <td><Link className="row-btn" href={`/streamer/${s.ticker}`}>Trade</Link></td>
-                </tr>
-              ))}
+              {filtered.map((s) => {
+                const isLive = Number(s.avgViewers || 0) > 0;
+
+                return (
+                  <tr key={s.ticker}>
+                    <td>
+                      <strong>{s.name}</strong>
+                    </td>
+                    <td>
+                      <span className="ticker-badge">{s.ticker}</span>
+                    </td>
+                    <td>
+                      <span className={isLive ? "live-pill live" : "live-pill offline"}>
+                        <span className="live-dot" />
+                        {isLive ? "LIVE" : "OFFLINE"}
+                      </span>
+                    </td>
+                    <td>{compact(s.followers)}</td>
+                    <td>{compact(s.avgViewers)}</td>
+                    <td>{money(streamerPrice(s))}</td>
+                    <td className={s.dayChange >= 0 ? "gain" : "loss"}>
+                      {s.dayChange >= 0 ? "+" : ""}
+                      {Number(s.dayChange || 0).toFixed(2)}%
+                    </td>
+                    <td>
+                      <Link className="row-btn" href={`/streamer/${s.ticker}`}>
+                        Trade
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
