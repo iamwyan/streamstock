@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getAdminSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 async function getTwitchToken() {
   const res = await fetch("https://id.twitch.tv/oauth2/token", {
@@ -22,148 +24,127 @@ async function getTwitchToken() {
   return res.json();
 }
 
-function calculateLiquidity(followers: number, viewers: number) {
-  let baseLiquidity = 120000;
-
-  if (followers >= 10000000) {
-    baseLiquidity = 5000000;
-  } else if (followers >= 5000000) {
-    baseLiquidity = 3000000;
-  } else if (followers >= 2000000) {
-    baseLiquidity = 1750000;
-  } else if (followers >= 1000000) {
-    baseLiquidity = 900000;
-  } else if (followers >= 500000) {
-    baseLiquidity = 450000;
-  } else if (followers >= 100000) {
-    baseLiquidity = 220000;
-  }
-
-  // Live viewers temporarily add liquidity so hot/live streamers
-  // are slightly harder to manipulate during hype.
-  const liveBoost = viewers * 12;
-
-  return Math.round(baseLiquidity + liveBoost);
+function defaultLiquidityForTwitchUser(twitchUser: any) {
+  return twitchUser?.broadcaster_type === "partner" ? 750000 : 250000;
 }
 
-export async function GET() {
+export async function POST(req: Request) {
+  const supabase = getAdminSupabase();
+
+  const authHeader = req.headers.get("authorization");
+
+  if (!authHeader) {
+    return NextResponse.json({ error: "Not logged in." }, { status: 401 });
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser(token);
+
+  if (userError || !user) {
+    return NextResponse.json({ error: "Invalid session." }, { status: 401 });
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile?.is_admin) {
+    return NextResponse.json({ error: "Admin only." }, { status: 403 });
+  }
+
+  const body = await req.json();
+
+  const ticker = String(body.ticker || "").trim().toUpperCase();
+  const twitchLogin = String(body.twitchLogin || "").trim().toLowerCase();
+  const startingPrice = Number(body.startingPrice || 25);
+
+  if (!ticker || !twitchLogin) {
+    return NextResponse.json(
+      { error: "Ticker and Twitch username are required." },
+      { status: 400 }
+    );
+  }
+
+  if (!Number.isFinite(startingPrice) || startingPrice <= 0) {
+    return NextResponse.json(
+      { error: "Starting price must be greater than 0." },
+      { status: 400 }
+    );
+  }
+
   const tokenData = await getTwitchToken();
-  const accessToken = tokenData.access_token;
 
-  if (!accessToken) {
+  if (!tokenData.access_token) {
     return NextResponse.json(
-      { error: "No Twitch token", tokenData },
+      { error: "Could not get Twitch token.", tokenData },
       { status: 500 }
     );
   }
 
-  const { data: streamers, error: streamerError } = await supabase
+  const twitchRes = await fetch(
+    `https://api.twitch.tv/helix/users?login=${encodeURIComponent(twitchLogin)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${tokenData.access_token}`,
+        "Client-Id": process.env.TWITCH_CLIENT_ID!,
+      },
+    }
+  );
+
+  const twitchJson = await twitchRes.json();
+  const twitchUser = twitchJson.data?.[0];
+
+  if (!twitchUser) {
+    return NextResponse.json({ error: "Twitch user not found." }, { status: 404 });
+  }
+
+  const { data: streamer, error } = await supabase
     .from("streamers")
-    .select("id,ticker,twitch_login,followers,liquidity");
+    .insert({
+      ticker,
+      display_name: twitchUser.display_name,
+      twitch_login: twitchUser.login,
+      profile_image_url: twitchUser.profile_image_url,
+      followers: Number(body.followers || 0),
+      avg_viewers: 0,
+      stream_hours: 0,
+      recent_growth: 0,
+      market_demand: 35,
+      liquidity: defaultLiquidityForTwitchUser(twitchUser),
+      current_price: startingPrice,
+    })
+    .select()
+    .single();
 
-  if (streamerError) {
-    return NextResponse.json(
-      { error: streamerError.message },
-      { status: 500 }
-    );
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (!streamers?.length) {
-    return NextResponse.json({
-      message: "No streamers found",
-    });
-  }
+  // Fire-and-forget Twitch sync.
+  // Do NOT await this on Vercel or the admin form can get stuck on "Adding...".
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
-  const logins = streamers
-    .map((s) => s.twitch_login)
-    .filter(Boolean);
+  if (siteUrl) {
+    const controller = new AbortController();
 
-  if (!logins.length) {
-    return NextResponse.json({
-      message: "No Twitch logins found",
-    });
-  }
+    setTimeout(() => {
+      controller.abort();
+    }, 2500);
 
-  const usersUrl =
-    "https://api.twitch.tv/helix/users?" +
-    logins.map((login) => `login=${encodeURIComponent(login)}`).join("&");
-
-  const usersRes = await fetch(usersUrl, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Client-Id": process.env.TWITCH_CLIENT_ID!,
-    },
-  });
-
-  const usersJson = await usersRes.json();
-  const twitchUsers = usersJson.data || [];
-
-  const streamUrl =
-    "https://api.twitch.tv/helix/streams?" +
-    logins.map((login) => `user_login=${encodeURIComponent(login)}`).join("&");
-
-  const streamsRes = await fetch(streamUrl, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Client-Id": process.env.TWITCH_CLIENT_ID!,
-    },
-  });
-
-  const streamsJson = await streamsRes.json();
-  const liveStreams = streamsJson.data || [];
-
-  const updates = [];
-
-  for (const streamer of streamers) {
-    const twitchLogin = streamer.twitch_login?.toLowerCase();
-
-    const twitchUser = twitchUsers.find(
-      (u: any) => u.login.toLowerCase() === twitchLogin
-    );
-
-    const live = liveStreams.find(
-      (s: any) => s.user_login.toLowerCase() === twitchLogin
-    );
-
-    if (!twitchUser) continue;
-
-    const avgViewers = live ? Number(live.viewer_count || 0) : 0;
-
-    const recentGrowth = live ? Math.min(15, avgViewers / 10000) : -0.25;
-
-    const marketDemand = live ? Math.min(100, 50 + avgViewers / 1000) : 35;
-
-    // Twitch Helix /users does NOT return follower count.
-    // Keep the follower value already stored in Supabase.
-    const followers = Number(streamer.followers || 0);
-
-    const liquidity = calculateLiquidity(followers, avgViewers);
-
-    const { error } = await supabase
-      .from("streamers")
-      .update({
-        display_name: twitchUser.display_name,
-        profile_image_url: twitchUser.profile_image_url,
-        avg_viewers: avgViewers,
-        recent_growth: recentGrowth,
-        market_demand: marketDemand,
-        liquidity,
-      })
-      .eq("id", streamer.id);
-
-    updates.push({
-      ticker: streamer.ticker,
-      twitch_login: streamer.twitch_login,
-      live: Boolean(live),
-      viewers: avgViewers,
-      followers,
-      liquidity,
-      error,
-    });
+    fetch(`${siteUrl}/api/twitch/sync`, {
+      signal: controller.signal,
+      cache: "no-store",
+    }).catch(() => null);
   }
 
   return NextResponse.json({
     success: true,
-    updated: updates,
+    streamer,
   });
 }
