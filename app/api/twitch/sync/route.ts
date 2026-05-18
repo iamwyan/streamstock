@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-function getAdminSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 async function getTwitchToken() {
   const res = await fetch("https://id.twitch.tv/oauth2/token", {
@@ -54,145 +52,178 @@ function calculateLiquidity(followers: number, viewers: number) {
   return Math.round(baseLiquidity + liveBoost);
 }
 
-async function syncTwitch() {
-  const supabase = getAdminSupabase();
-  const accessToken = await getTwitchToken();
-
-  const { data: streamers, error: streamersError } = await supabase
-    .from("streamers")
-    .select("id,ticker,twitch_login,followers")
-    .not("twitch_login", "is", null);
-
-  if (streamersError) {
-    throw new Error(streamersError.message);
-  }
-
-  if (!streamers?.length) {
-    return {
-      success: true,
-      updated: [],
-      message: "No streamers found.",
-    };
-  }
-
-  const logins = streamers
-    .map((s) => String(s.twitch_login || "").trim().toLowerCase())
-    .filter(Boolean);
-
-  if (!logins.length) {
-    return {
-      success: true,
-      updated: [],
-      message: "No Twitch logins found.",
-    };
-  }
-
-  const usersUrl =
-    "https://api.twitch.tv/helix/users?" +
-    logins.map((login) => `login=${encodeURIComponent(login)}`).join("&");
-
-  const streamsUrl =
-    "https://api.twitch.tv/helix/streams?" +
-    logins.map((login) => `user_login=${encodeURIComponent(login)}`).join("&");
-
-  const twitchHeaders = {
-    Authorization: `Bearer ${accessToken}`,
-    "Client-Id": process.env.TWITCH_CLIENT_ID!,
-  };
-
-  const [usersRes, streamsRes] = await Promise.all([
-    fetch(usersUrl, {
-      headers: twitchHeaders,
+async function getFollowerCount(broadcasterId: string, accessToken: string) {
+  const res = await fetch(
+    `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${encodeURIComponent(
+      broadcasterId
+    )}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Client-Id": process.env.TWITCH_CLIENT_ID!,
+      },
       cache: "no-store",
-    }),
-    fetch(streamsUrl, {
-      headers: twitchHeaders,
-      cache: "no-store",
-    }),
-  ]);
-
-  const usersJson = await usersRes.json();
-  const streamsJson = await streamsRes.json();
-
-  if (!usersRes.ok) {
-    throw new Error(usersJson?.message || "Could not fetch Twitch users.");
-  }
-
-  if (!streamsRes.ok) {
-    throw new Error(streamsJson?.message || "Could not fetch Twitch streams.");
-  }
-
-  const twitchUsers = usersJson.data || [];
-  const liveStreams = streamsJson.data || [];
-  const updates = [];
-
-  for (const streamer of streamers) {
-    const twitchLogin = String(streamer.twitch_login || "").toLowerCase();
-
-    const twitchUser = twitchUsers.find(
-      (u: any) => String(u.login || "").toLowerCase() === twitchLogin
-    );
-
-    const live = liveStreams.find(
-      (s: any) => String(s.user_login || "").toLowerCase() === twitchLogin
-    );
-
-    if (!twitchUser) {
-      updates.push({
-        ticker: streamer.ticker,
-        twitch_login: streamer.twitch_login,
-        live: false,
-        viewers: 0,
-        error: "Twitch user not found.",
-      });
-      continue;
     }
+  );
 
-    const viewers = live ? Number(live.viewer_count || 0) : 0;
+  const data = await res.json();
 
-    // Twitch Helix users endpoint does NOT return follower count.
-    // Keep your Supabase follower count and use it for liquidity tiers.
-    const followers = Number(streamer.followers || 0);
-    const liquidity = calculateLiquidity(followers, viewers);
-
-    const recentGrowth = live ? Math.min(15, viewers / 10000) : -0.25;
-    const marketDemand = live ? Math.min(100, 50 + viewers / 1000) : 35;
-
-    const { error } = await supabase
-      .from("streamers")
-      .update({
-        display_name: twitchUser.display_name,
-        profile_image_url: twitchUser.profile_image_url,
-        avg_viewers: viewers,
-        recent_growth: recentGrowth,
-        market_demand: marketDemand,
-        liquidity,
-      })
-      .eq("id", streamer.id);
-
-    updates.push({
-      ticker: streamer.ticker,
-      twitch_login: streamer.twitch_login,
-      live: Boolean(live),
-      viewers,
-      followers,
-      liquidity,
-      error: error?.message || null,
-    });
+  if (!res.ok) {
+    return {
+      followers: 0,
+      error: data?.message || "Could not fetch follower count.",
+    };
   }
 
   return {
-    success: true,
-    updated: updates,
+    followers: Number(data.total || 0),
+    error: null,
   };
 }
 
 export async function GET() {
   try {
-    const result = await syncTwitch();
-    return NextResponse.json(result);
+    const accessToken = await getTwitchToken();
+
+    const { data: streamers, error: streamersError } = await supabase
+      .from("streamers")
+      .select("id,ticker,twitch_login,followers")
+      .not("twitch_login", "is", null);
+
+    if (streamersError) {
+      throw new Error(streamersError.message);
+    }
+
+    if (!streamers?.length) {
+      return NextResponse.json({
+        success: true,
+        updated: [],
+        message: "No streamers found.",
+      });
+    }
+
+    const logins = streamers
+      .map((s) => String(s.twitch_login || "").trim().toLowerCase())
+      .filter(Boolean);
+
+    if (!logins.length) {
+      return NextResponse.json({
+        success: true,
+        updated: [],
+        message: "No Twitch logins found.",
+      });
+    }
+
+    const twitchHeaders = {
+      Authorization: `Bearer ${accessToken}`,
+      "Client-Id": process.env.TWITCH_CLIENT_ID!,
+    };
+
+    const usersUrl =
+      "https://api.twitch.tv/helix/users?" +
+      logins.map((login) => `login=${encodeURIComponent(login)}`).join("&");
+
+    const streamsUrl =
+      "https://api.twitch.tv/helix/streams?" +
+      logins.map((login) => `user_login=${encodeURIComponent(login)}`).join("&");
+
+    const [usersRes, streamsRes] = await Promise.all([
+      fetch(usersUrl, {
+        headers: twitchHeaders,
+        cache: "no-store",
+      }),
+      fetch(streamsUrl, {
+        headers: twitchHeaders,
+        cache: "no-store",
+      }),
+    ]);
+
+    const usersJson = await usersRes.json();
+    const streamsJson = await streamsRes.json();
+
+    if (!usersRes.ok) {
+      throw new Error(usersJson?.message || "Could not fetch Twitch users.");
+    }
+
+    if (!streamsRes.ok) {
+      throw new Error(streamsJson?.message || "Could not fetch Twitch streams.");
+    }
+
+    const twitchUsers = usersJson.data || [];
+    const liveStreams = streamsJson.data || [];
+    const updates = [];
+
+    for (const streamer of streamers) {
+      const twitchLogin = String(streamer.twitch_login || "").toLowerCase();
+
+      const twitchUser = twitchUsers.find(
+        (u: any) => String(u.login || "").toLowerCase() === twitchLogin
+      );
+
+      const live = liveStreams.find(
+        (s: any) => String(s.user_login || "").toLowerCase() === twitchLogin
+      );
+
+      if (!twitchUser) {
+        updates.push({
+          ticker: streamer.ticker,
+          twitch_login: streamer.twitch_login,
+          live: false,
+          viewers: 0,
+          followers: Number(streamer.followers || 0),
+          error: "Twitch user not found.",
+        });
+        continue;
+      }
+
+      const viewers = live ? Number(live.viewer_count || 0) : 0;
+
+      const followerResult = await getFollowerCount(twitchUser.id, accessToken);
+      const followers =
+        followerResult.followers > 0
+          ? followerResult.followers
+          : Number(streamer.followers || 0);
+
+      const recentGrowth = live ? Math.min(15, viewers / 10000) : -0.25;
+
+      const marketDemand = live ? Math.min(100, 50 + viewers / 1000) : 35;
+
+      const liquidity = calculateLiquidity(followers, viewers);
+
+      const { error } = await supabase
+        .from("streamers")
+        .update({
+          display_name: twitchUser.display_name,
+          twitch_login: twitchUser.login,
+          profile_image_url: twitchUser.profile_image_url,
+          followers,
+          avg_viewers: viewers,
+          live: Boolean(live),
+          recent_growth: recentGrowth,
+          market_demand: marketDemand,
+          liquidity,
+        })
+        .eq("id", streamer.id);
+
+      updates.push({
+        ticker: streamer.ticker,
+        twitch_login: streamer.twitch_login,
+        live: Boolean(live),
+        viewers,
+        followers,
+        liquidity,
+        follower_error: followerResult.error,
+        error,
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      updated: updates,
+    });
   } catch (err: any) {
-    console.error("Twitch sync failed:", err);
+    console.error(err);
+
     return NextResponse.json(
       {
         success: false,
@@ -201,9 +232,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
-
-// Also allow POST so other routes can trigger sync without caring about method.
-export async function POST() {
-  return GET();
 }
