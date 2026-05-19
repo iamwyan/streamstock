@@ -185,6 +185,41 @@ export default function HomePage() {
   const [q, setQ] = useState("");
   const [streamers, setStreamers] = useState<any[]>([]);
   const [loadingMarket, setLoadingMarket] = useState(true);
+  const [cashFlow24h, setCashFlow24h] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadCashFlow24h() {
+      try {
+        const res = await fetch("/api/market/24h-cash-flow", {
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          throw new Error(`24h cash flow route failed: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (!mounted) return;
+
+        setCashFlow24h(Number(data.total || 0));
+      } catch (err) {
+        console.error("24h cash flow request failed:", err);
+        if (mounted) setCashFlow24h(0);
+      }
+    }
+
+    loadCashFlow24h();
+
+    const interval = window.setInterval(loadCashFlow24h, 30000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -317,8 +352,8 @@ export default function HomePage() {
 
         <article className="panel home-metric-card">
           <span>24h Demand</span>
-          <strong>{money(totalVolume)}</strong>
-          <em>Estimated fake-money flow</em>
+          <strong>{money(cashFlow24h)}</strong>
+          <em>Estimated Cash flow</em>
         </article>
 
         <article className="panel home-metric-card">

@@ -1804,3 +1804,75 @@ input::placeholder { color: var(--muted); }
     max-height: 250px !important;
   }
 }
+
+
+/* v25 laptop header spacing fix */
+@media (max-width: 1500px) {
+  .site-header {
+    grid-template-columns:
+      auto
+      minmax(180px, 320px)
+      minmax(180px, 1fr)
+      auto
+      auto !important;
+    gap: 10px !important;
+  }
+
+  .header-search {
+    max-width: 280px !important;
+  }
+
+  .desktop-nav {
+    gap: 6px !important;
+    min-width: 0 !important;
+  }
+
+  .desktop-nav a {
+    padding: 8px 10px !important;
+    font-size: .9rem !important;
+  }
+
+  .money-dock {
+    transform: scale(.86);
+    transform-origin: right center;
+    gap: 6px !important;
+  }
+
+  .money-chip {
+    min-width: 96px !important;
+    padding: 7px 9px !important;
+  }
+
+  .money-chip strong {
+    font-size: .92rem !important;
+  }
+}
+
+@media (max-width: 1350px) {
+  .header-search {
+    max-width: 220px !important;
+  }
+
+  .desktop-nav a {
+    padding: 7px 8px !important;
+    font-size: .86rem !important;
+  }
+
+  .money-dock {
+    transform: scale(.80);
+  }
+
+  .money-chip {
+    min-width: 88px !important;
+  }
+}
+
+@media (max-width: 1250px) {
+  .header-search {
+    display: none !important;
+  }
+
+  .money-dock {
+    transform: scale(.76);
+  }
+}

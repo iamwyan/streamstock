@@ -24,68 +24,69 @@ export default function LeaderboardPage() {
   async function loadLeaderboard() {
     setLoading(true);
 
-    const { data: profiles, error } = await supabase
+    // Load profiles first so brand-new users with no holdings still appear.
+    const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
-      .select(`
-        id,
-        username,
-        cash_balance,
-        portfolio_visible,
-        trades_visible,
-        holdings (
-          shares,
-          streamers (
-            current_price
-          )
-        )
-      `)
+      .select("id, username, cash_balance");
 
-    if (error) {
-      console.error(error);
+    if (profilesError) {
+      console.error("Leaderboard profiles error:", profilesError);
       setLoading(false);
       return;
     }
 
-    const ranked =
-      profiles?.map((user: any) => {
-        const portfolio =
-          user.holdings?.reduce(
-            (sum: number, h: any) =>
-              sum +
-              Number(h.shares || 0) *
-                Number(
-                  h.streamers
-                    ?.current_price || 0
-                ),
-            0
-          ) || 0;
+    const profileIds = (profiles || []).map((p: any) => p.id);
 
-        const cash = Number(
-          user.cash_balance || 0
-        );
+    let holdings: any[] = [];
 
-        return {
-          id: user.id,
-          username:
-            user.username ||
-            "Unknown Trader",
-          cash,
-          portfolio,
-          netWorth:
-            cash + portfolio,
-        };
-      }) || [];
+    if (profileIds.length > 0) {
+      const { data: holdingsData, error: holdingsError } = await supabase
+        .from("holdings")
+        .select(`
+          user_id,
+          shares,
+          streamers (
+            current_price
+          )
+        `)
+        .in("user_id", profileIds);
 
-    ranked.sort(
-      (a, b) =>
-        b.netWorth -
-        a.netWorth
-    );
+      if (holdingsError) {
+        console.error("Leaderboard holdings error:", holdingsError);
+      } else {
+        holdings = holdingsData || [];
+      }
+    }
 
-    setUsers(
-      ranked.slice(0, 100)
-    );
+    const portfolioByUser = new Map<string, number>();
 
+    for (const holding of holdings) {
+      const value =
+        Number(holding.shares || 0) *
+        Number(holding.streamers?.current_price || 0);
+
+      portfolioByUser.set(
+        holding.user_id,
+        (portfolioByUser.get(holding.user_id) || 0) + value
+      );
+    }
+
+    const ranked: UserRow[] = (profiles || []).map((profile: any) => {
+      const cash = Number(profile.cash_balance || 0);
+      const portfolio = portfolioByUser.get(profile.id) || 0;
+
+      return {
+        id: profile.id,
+        username: profile.username || "Unknown Trader",
+        cash,
+        portfolio,
+        netWorth: cash + portfolio,
+      };
+    });
+
+    ranked.sort((a, b) => b.netWorth - a.netWorth);
+
+    setUsers(ranked.slice(0, 100));
     setLoading(false);
   }
 
@@ -100,17 +101,12 @@ export default function LeaderboardPage() {
   return (
     <>
       <section className="panel full">
-        <p className="eyebrow">
-          Leaderboard
-        </p>
+        <p className="eyebrow">Leaderboard</p>
 
-        <h1>
-          Top 100 richest users
-        </h1>
+        <h1>Top 100 richest users</h1>
 
         <p className="muted">
-          Ranked by real
-          StreamStock net worth.
+          Ranked by real StreamStock net worth.
         </p>
       </section>
 
@@ -128,46 +124,32 @@ export default function LeaderboardPage() {
             </thead>
 
             <tbody>
-              {users.map(
-                (u, i) => (
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={5}>
+                    No users found yet.
+                  </td>
+                </tr>
+              ) : (
+                users.map((u, i) => (
                   <tr key={u.id}>
-                    <td>
-                      #{i + 1}
-                    </td>
+                    <td>#{i + 1}</td>
 
                     <td>
-                      <Link
-                        href={`/user/${u.username}`}
-                      >
-                        <strong>
-                          {
-                            u.username
-                          }
-                        </strong>
+                      <Link href={`/user/${encodeURIComponent(u.username)}`}>
+                        <strong>{u.username}</strong>
                       </Link>
                     </td>
 
-                    <td>
-                      {money(
-                        u.cash
-                      )}
-                    </td>
+                    <td>{money(u.cash)}</td>
+
+                    <td>{money(u.portfolio)}</td>
 
                     <td>
-                      {money(
-                        u.portfolio
-                      )}
-                    </td>
-
-                    <td>
-                      <strong>
-                        {money(
-                          u.netWorth
-                        )}
-                      </strong>
+                      <strong>{money(u.netWorth)}</strong>
                     </td>
                   </tr>
-                )
+                ))
               )}
             </tbody>
           </table>
