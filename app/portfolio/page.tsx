@@ -7,6 +7,60 @@ import { money } from "@/lib/market";
 
 type Tab = "summary" | "positions" | "activity";
 
+function StreamerAvatar({
+  ticker,
+  imageUrl,
+  name,
+}: {
+  ticker?: string;
+  imageUrl?: string | null;
+  name?: string | null;
+}) {
+  return (
+    <span className="avatar-dot" style={{ overflow: "hidden" }}>
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={`${name || ticker || "Streamer"} profile`}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
+      ) : (
+        ticker?.slice(0, 1)
+      )}
+    </span>
+  );
+}
+
+function chartPath(points: number[]) {
+  if (!points.length) return "";
+
+  const width = 520;
+  const height = 180;
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const spread = Math.max(1, max - min);
+
+  return points
+    .map((value, index) => {
+      const x =
+        points.length === 1
+          ? 0
+          : (index / (points.length - 1)) * width;
+      const y = height - ((value - min) / spread) * 140 - 20;
+
+      return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
 export default function PortfolioPage() {
   const [tab, setTab] = useState<Tab>("summary");
   const [range, setRange] = useState("1Y");
@@ -48,6 +102,7 @@ export default function PortfolioPage() {
           id,
           ticker,
           display_name,
+          profile_image_url,
           current_price,
           followers,
           avg_viewers,
@@ -64,7 +119,8 @@ export default function PortfolioPage() {
         *,
         streamers (
           ticker,
-          display_name
+          display_name,
+          profile_image_url
         )
       `)
       .eq("user_id", user.id)
@@ -92,6 +148,7 @@ export default function PortfolioPage() {
       id: h.id,
       ticker: streamer?.ticker,
       name: streamer?.display_name,
+      profileImageUrl: streamer?.profile_image_url || null,
       shares,
       avgCost,
       price,
@@ -107,6 +164,47 @@ export default function PortfolioPage() {
   const totalReturn = portfolioValue - totalCost;
   const accountValue = cash + portfolioValue;
   const returnPct = totalCost ? (totalReturn / totalCost) * 100 : 0;
+
+  const chartPoints = useMemo(() => {
+    const now = Date.now();
+
+    const rangeDays =
+      range === "1M" ? 30 : range === "YTD" ? 365 : range === "3Y" ? 1095 : 365;
+
+    const since = now - rangeDays * 24 * 60 * 60 * 1000;
+
+    const filteredTrades = [...trades]
+      .filter((trade) => new Date(trade.created_at).getTime() >= since)
+      .sort(
+        (a, b) =>
+          new Date(a.created_at).getTime() -
+          new Date(b.created_at).getTime()
+      );
+
+    const startingValue = 25000;
+    const estimatedFeeRate = 0.01;
+    const points = [startingValue];
+
+    let estimatedValue = startingValue;
+
+    filteredTrades.forEach((trade) => {
+      const tradeTotal = Number(trade.total || 0);
+      const feeDrag = tradeTotal * estimatedFeeRate;
+
+      // Trades move cash into/out of positions. The fee is the immediate
+      // account drag, and the final point snaps to live account value.
+      estimatedValue -= feeDrag;
+      points.push(Math.max(0, estimatedValue));
+    });
+
+    if (points[points.length - 1] !== accountValue) {
+      points.push(accountValue);
+    }
+
+    return points;
+  }, [trades, range, accountValue]);
+
+  const portfolioChartPath = chartPath(chartPoints);
 
   const movers = useMemo(() => {
     return [...positions]
@@ -190,11 +288,15 @@ export default function PortfolioPage() {
               <div className="mini-performance-chart">
                 <svg viewBox="0 0 520 180" preserveAspectRatio="none">
                   <path className="grid-line" d="M0 45H520M0 95H520M0 145H520" />
-                  <path
-                    className="chart-line"
-                    d="M0 135 C35 125, 55 150, 80 132 S125 118, 145 122 S175 38, 205 52 S260 62, 290 50 S340 70, 370 60 S420 100, 450 88 S485 45, 520 30"
-                  />
+                  {portfolioChartPath ? (
+                    <path className="chart-line" d={portfolioChartPath} />
+                  ) : null}
                 </svg>
+                <div className="chart-axis">
+                  <span>{range} ago</span>
+                  <span>{money(accountValue)}</span>
+                  <span>Today</span>
+                </div>
               </div>
 
               <div className="range-pills">
@@ -228,7 +330,11 @@ export default function PortfolioPage() {
                   movers.map((p) => (
                     <Link href={`/streamer/${p.ticker}`} className="mover-row-card" key={p.id}>
                       <div className="symbol-cell">
-                        <span className="avatar-dot">{p.ticker?.slice(0, 1)}</span>
+                        <StreamerAvatar
+                          ticker={p.ticker}
+                          imageUrl={p.profileImageUrl}
+                          name={p.name}
+                        />
                         <div>
                           <strong>{p.ticker}</strong>
                           <span>{p.name}</span>
@@ -332,7 +438,11 @@ export default function PortfolioPage() {
                     <tr key={p.id}>
                       <td>
                         <Link href={`/streamer/${p.ticker}`} className="table-name">
-                          <span className="avatar-dot">{p.ticker?.slice(0, 1)}</span>
+                          <StreamerAvatar
+                            ticker={p.ticker}
+                            imageUrl={p.profileImageUrl}
+                            name={p.name}
+                          />
                           <div>
                             <strong>{p.ticker}</strong>
                             <span>{p.name}</span>
