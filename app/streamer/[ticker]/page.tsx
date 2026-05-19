@@ -14,6 +14,7 @@ export default function StreamerPage() {
 
   const [streamer, setStreamer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [priceChange24h, setPriceChange24h] = useState(0);
 
   useEffect(() => {
     async function loadStreamer() {
@@ -22,7 +23,7 @@ export default function StreamerPage() {
       const { data, error } = await supabase
         .from("streamers")
         .select(
-          "id,ticker,display_name,twitch_login,followers,avg_viewers,stream_hours,recent_growth,market_demand,current_price"
+          "id,ticker,display_name,twitch_login,followers,avg_viewers,stream_hours,recent_growth,market_demand,current_price,liquidity"
         )
         .eq("ticker", ticker.toUpperCase())
         .single();
@@ -31,6 +32,25 @@ export default function StreamerPage() {
         console.error(error);
         setStreamer(null);
       } else {
+        let realDayChange = 0;
+
+        try {
+          const res = await fetch("/api/market/price-changes", {
+            cache: "no-store",
+          });
+
+          if (res.ok) {
+            const changeData = await res.json();
+            realDayChange = Number(
+              changeData.changes?.[data.ticker]?.percent || 0
+            );
+          }
+        } catch (changeError) {
+          console.error("Failed to load 24h price change:", changeError);
+        }
+
+        setPriceChange24h(realDayChange);
+
         setStreamer({
           ...data,
 
@@ -40,8 +60,9 @@ export default function StreamerPage() {
           streamHours: data.stream_hours,
           recentGrowth: data.recent_growth,
           currentPrice: data.current_price,
+          liquidity: data.liquidity,
           netFlow: data.market_demand,
-          dayChange: Number(data.recent_growth || 0),
+          dayChange: realDayChange,
         });
       }
 
@@ -122,9 +143,12 @@ export default function StreamerPage() {
               </div>
 
               <div className="metric-tile">
-                <span>Recent Growth</span>
-                <strong className={streamer.recent_growth >= 0 ? "gain" : "loss"}>
-                  {streamer.recent_growth}%
+                <span>Twitch Momentum</span>
+                <strong
+                  className={streamer.recent_growth >= 0 ? "gain" : "loss"}
+                >
+                  {streamer.recent_growth >= 0 ? "+" : ""}
+                  {Number(streamer.recent_growth || 0).toFixed(1)}%
                 </strong>
               </div>
 

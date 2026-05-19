@@ -224,6 +224,53 @@ export default function HomePage() {
   useEffect(() => {
     let mounted = true;
 
+    async function loadPriceChanges() {
+      try {
+        const res = await fetch("/api/market/price-changes", {
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          throw new Error(`price changes route failed: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (!mounted) return;
+
+        const changes = data.changes || {};
+
+        setStreamers((current) =>
+          current.map((s) => {
+            const change = changes[s.ticker];
+
+            if (!change) return s;
+
+            return {
+              ...s,
+              dayChange: Number(change.percent || 0),
+              netFlow: Number(change.netFlow || 0),
+            };
+          })
+        );
+      } catch (err) {
+        console.error("price changes request failed:", err);
+      }
+    }
+
+    loadPriceChanges();
+
+    const interval = window.setInterval(loadPriceChanges, 30000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
     async function loadStreamers() {
       const { data, error } = await supabase
         .from("streamers")
